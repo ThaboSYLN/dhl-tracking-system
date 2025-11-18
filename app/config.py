@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     #DATABASE sets
     DATABASE_URL: str  = "sqlite+aiosqlite:///./tracking_System.db" # current dir
 
-    #Pushing set
+    #Pushing set 
     BATCH_SIZE:int  = 25
-    BATCH_DELAY: int  = 5 # seconds---> will change in due time
+    BATCH_DELAY: int  = 5 # seconds---> will change in due time 
 
     #mkdir for export 
     EXPORT_FOLDER: str  = "exprts"
@@ -56,3 +56,4 @@ def get_settings() -> Settings:
     This ensure that single instance of lru_cache is evoked per run(Sington or dependency injection pattern)
     """
     return Settings()
+    
