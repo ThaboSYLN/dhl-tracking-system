@@ -1,247 +1,324 @@
 """
-Tracking API Endpoints
-Follows Interface Segregation Principle - clean, focused API interface
+FastAPI endpoints for DHL tracking system
+Implements REST API following best practices
 """
-import time
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
-from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
-from app.models.database import get_db
-from app.config import get_settings, Settings
+from app.utils.database import get_db
 from app.models.schemas import (
-    WaybillRequest,
-    TrackingInfo,
-    BulkTrackingResponse,
-    HealthResponse
+    TrackingNumberInput, TrackingResponse, BulkTrackingRequest,
+    BulkTrackingResponse, ExportRequest, ExportResponse, APIUsageResponse
 )
-from app.core.dhl_services import DHLAPIService
-from app.core.file_processor import FileProcessorService
-from app.repositories.tracking_repository import (
-    TrackingRepository,
-    APIUsageRepository
-)
+from app.repositories import TrackingRepository, APIUsageRepository, ExportRepository
+from app.core.dhl_services import dhl_service
+from app.core.file_processor import file_processor
+from app.core.export_services import export_service
+from app.core.batch_processor import BatchProcessor
+from app.utils.config import settings
 
+logger = logging.getLogger(__name__)
+
+# Create router
 router = APIRouter(prefix="/tracking", tags=["Tracking"])
 
+# Initialize batch processor
+batch_processor = BatchProcessor(dhl_service)
 
-@router.post(
-    "/single",
-    response_model=TrackingInfo,
-    summary="Track single shipment",
-    description="Track a single shipment using waybill/tracking number"
-)
+
+@router.post("/single", response_model=TrackingResponse, summary="Track Single Shipment")
 async def track_single_shipment(
-    request: WaybillRequest,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings)
+    request: TrackingNumberInput,
+    db: Session = Depends(get_db)
 ):
     """
-    Track a single DHL shipment
+    Track a single DHL shipment by tracking number
     
-    - *waybill_number*: DHL tracking or waybill number
+    - **tracking_number**: DHL tracking/waybill number
+    
+    Returns detailed tracking information including:
+    - Current status
+    - Origin and destination
+    - Tracking timeline
     """
-    start_time = time.time()
-    
-    # Check API usage limits
-    usage_repo = APIUsageRepository(db)
-    can_request = await usage_repo.can_make_requests(1, settings.DHL_DAILY_LIMIT)
-    
-    if not can_request:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Daily API limit reached. Please try again tomorrow."
-        )
-    
-    # Track shipment
-    async with DHLAPIService(settings) as dhl_service:
-        tracking_info = await dhl_service.track_single_shipment(request.waybill_number)
-    
-    # Save to database
-    tracking_repo = TrackingRepository(db)
-    await tracking_repo.create_or_update_tracking(tracking_info)
-    
-    # Log API usage
-    response_time = int((time.time() - start_time) * 1000)
-    await usage_repo.log_api_usage(
-        endpoint="/tracking/single",
-        waybill_count=1,
-        success=not tracking_info.error_message,
-        response_time_ms=response_time,
-        error_message=tracking_info.error_message
-    )
-    
-    await db.commit()
-    
-    return tracking_info
+    try:
+        tracking_repo = TrackingRepository(db)
+        api_usage_repo = APIUsageRepository(db)
+        
+        # Check rate limits
+        if not api_usage_repo.can_make_request(settings.DHL_DAILY_LIMIT):
+            raise HTTPException(
+                status_code=429,
+                detail="Daily API limit reached. Please try again tomorrow."
+            )
+        
+        # Check if we have recent cached data
+        existing = tracking_repo.get_by_tracking_number(request.tracking_number)
+        if existing and existing.last_checked:
+            from datetime import datetime
+            age_seconds = (datetime.utcnow() - existing.last_checked).seconds
+            if age_seconds < 3600:  # Less than 1 hour old
+                logger.info(f"Returning cached data for {request.tracking_number}")
+                return existing
+        
+        # Fetch from DHL API
+        result = await dhl_service.track_single(request.tracking_number)
+        
+        # Save to database
+        record = tracking_repo.upsert(result)
+        
+        # Update API usage
+        api_usage_repo.increment_usage(success=result.get('is_successful', False))
+        
+        return record
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error tracking single shipment: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.post(
-    "/bulk",
-    response_model=BulkTrackingResponse,
-    summary="Track multiple shipments",
-    description="Track multiple shipments by uploading CSV or Excel file"
-)
+@router.post("/bulk", response_model=BulkTrackingResponse, summary="Track Multiple Shipments")
 async def track_bulk_shipments(
-    file: UploadFile = File(..., description="CSV or Excel file with waybill numbers"),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings)
+    request: BulkTrackingRequest,
+    db: Session = Depends(get_db)
 ):
     """
-    Track multiple DHL shipments from uploaded file
+    Track multiple DHL shipments in a single request
     
-    - *file*: CSV or Excel file containing waybill numbers
-    - File must have a column named: 'waybill', 'tracking_number', 'tracking', or 'awb'
-    - Maximum 250 waybills per file (DHL daily limit)
+    - **tracking_numbers**: List of tracking/waybill numbers (max 1000)
+    
+    Intelligently batches requests to optimize API usage and respect rate limits.
+    Uses caching to minimize API calls for recently checked shipments.
     """
-    start_time = time.time()
-    
-    # Extract waybills from file
-    waybill_numbers = await FileProcessorService.extract_waybills_from_file(file)
-    
-    # Check API usage limits
-    usage_repo = APIUsageRepository(db)
-    can_request = await usage_repo.can_make_requests(
-        len(waybill_numbers),
-        settings.DHL_DAILY_LIMIT
-    )
-    
-    if not can_request:
-        requests_used = await usage_repo.get_today_request_count()
-        remaining = settings.DHL_DAILY_LIMIT - requests_used
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Not enough API quota. Requested: {len(waybill_numbers)}, Remaining: {remaining}"
+    try:
+        tracking_repo = TrackingRepository(db)
+        api_usage_repo = APIUsageRepository(db)
+        
+        # Check rate limits
+        remaining = api_usage_repo.get_remaining_requests(settings.DHL_DAILY_LIMIT)
+        if remaining <= 0:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily API limit reached. Please try again tomorrow."
+            )
+        
+        # Process batch
+        results = await batch_processor.process_batch(
+            request.tracking_numbers,
+            tracking_repo,
+            api_usage_repo
         )
-    
-    # Track all shipments with batching
-    async with DHLAPIService(settings) as dhl_service:
-        results = await dhl_service.track_multiple_shipments(
-            waybill_numbers,
-            batch_size=settings.BATCH_SIZE,
-            delay_between_batches=settings.BATCH_DELAY
+        
+        return BulkTrackingResponse(
+            total_requested=results["total_requested"],
+            successful=results["successful"],
+            failed=results["failed"],
+            results=results["results"],
+            batch_id=results["batch_id"],
+            processing_time=results["processing_time"]
         )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error tracking bulk shipments: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.post("/upload", response_model=BulkTrackingResponse, summary="Upload and Track from File")
+async def upload_and_track(
+    file: UploadFile = File(..., description="CSV or Excel file with tracking numbers"),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload a CSV or Excel file containing tracking numbers and process them
     
-    # Save to database
-    tracking_repo = TrackingRepository(db)
-    await tracking_repo.bulk_create_or_update(results)
+    - **file**: CSV or Excel file (.csv, .xlsx, .xls)
+    - File should contain a column named 'tracking_number', 'waybill', or similar
+    - If no matching column is found, the first column will be used
     
-    # Log API usage
-    successful = sum(1 for r in results if not r.error_message)
-    failed = len(results) - successful
-    response_time = int((time.time() - start_time) * 1000)
+    The system will:
+    1. Extract tracking numbers from the file
+    2. Remove duplicates
+    3. Batch process them intelligently
+    4. Return detailed results
+    """
+    try:
+        # Process file to extract tracking numbers
+        tracking_numbers = await file_processor.process_file(file)
+        
+        if not tracking_numbers:
+            raise HTTPException(status_code=400, detail="No valid tracking numbers found in file")
+        
+        logger.info(f"Extracted {len(tracking_numbers)} tracking numbers from {file.filename}")
+        
+        # Process as bulk request
+        tracking_repo = TrackingRepository(db)
+        api_usage_repo = APIUsageRepository(db)
+        
+        # Check rate limits
+        remaining = api_usage_repo.get_remaining_requests(settings.DHL_DAILY_LIMIT)
+        if remaining <= 0:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily API limit reached. Please try again tomorrow."
+            )
+        
+        # Process batch
+        results = await batch_processor.process_large_batch(
+            tracking_numbers,
+            tracking_repo,
+            api_usage_repo
+        )
+        
+        return BulkTrackingResponse(
+            total_requested=results["total_requested"],
+            successful=results["successful"],
+            failed=results["failed"],
+            results=results["results"],
+            batch_id=results.get("batch_ids", [None])[0],
+            processing_time=results["processing_time"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing file upload: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.post("/export", response_model=ExportResponse, summary="Export Tracking Data")
+async def export_tracking_data(
+    request: ExportRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Export tracking data to PDF or DOCX format
     
-    await usage_repo.log_api_usage(
-        endpoint="/tracking/bulk",
-        waybill_count=len(results),
-        success=True,
-        response_time_ms=response_time
-    )
+    - **tracking_numbers**: List of tracking numbers to include in export
+    - **format**: Export format ('pdf' or 'docx')
+    - **include_details**: Include detailed information (origin, destination, etc.)
     
-    await db.commit()
+    Returns a downloadable file with the tracking information formatted in a table.
+    """
+    try:
+        tracking_repo = TrackingRepository(db)
+        export_repo = ExportRepository(db)
+        
+        # Get tracking records
+        records = tracking_repo.get_multiple(request.tracking_numbers)
+        
+        if not records:
+            raise HTTPException(status_code=404, detail="No tracking records found")
+        
+        # Generate export file
+        if request.format == "pdf":
+            file_path = export_service.generate_pdf(records, request.include_details)
+        else:  # docx
+            file_path = export_service.generate_docx(records, request.include_details)
+        
+        # Save export history
+        export_repo.create({
+            "export_type": request.format,
+            "file_path": file_path,
+            "tracking_numbers": request.tracking_numbers,
+            "record_count": len(records)
+        })
+        
+        # Schedule cleanup of old exports
+        background_tasks.add_task(export_service.cleanup_old_exports, days=7)
+        
+        import os
+        file_name = os.path.basename(file_path)
+        
+        return ExportResponse(
+            success=True,
+            file_path=file_path,
+            file_name=file_name,
+            download_url=f"/api/v1/tracking/download/{file_name}",
+            record_count=len(records)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting tracking data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@router.get("/download/{filename}", summary="Download Export File")
+async def download_export_file(filename: str):
+    """
+    Download an exported tracking report
     
-    # Prepare response
-    return BulkTrackingResponse(
-        total_processed=len(results),
-        successful=successful,
-        failed=failed,
-        results=results,
-        processing_time_seconds=round(time.time() - start_time, 2)
+    - **filename**: Name of the file to download
+    """
+    import os
+    file_path = os.path.join(settings.EXPORT_DIR, filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine media type
+    if filename.endswith('.pdf'):
+        media_type = 'application/pdf'
+    elif filename.endswith('.docx'):
+        media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    else:
+        media_type = 'application/octet-stream'
+    
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        filename=filename
     )
 
 
-@router.get(
-    "/history/{waybill_number}",
-    response_model=TrackingInfo,
-    summary="Get tracking history",
-    description="Retrieve tracking information from database"
-)
-async def get_tracking_history(
-    waybill_number: str,
-    db: AsyncSession = Depends(get_db)
-):
+@router.get("/history/{tracking_number}", response_model=TrackingResponse, summary="Get Tracking History")
+async def get_tracking_history(tracking_number: str, db: Session = Depends(get_db)):
     """
-    Get tracking history from database (no API call)
+    Get stored tracking history for a specific tracking number
     
-    - *waybill_number*: DHL tracking or waybill number
+    - **tracking_number**: DHL tracking/waybill number
+    
+    Returns cached tracking information without making a new API call.
     """
     tracking_repo = TrackingRepository(db)
-    record = await tracking_repo.get_tracking_by_waybill(waybill_number.upper())
+    record = tracking_repo.get_by_tracking_number(tracking_number.upper())
     
     if not record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No tracking history found for waybill: {waybill_number}"
-        )
+        raise HTTPException(status_code=404, detail="Tracking number not found in database")
     
-    return TrackingInfo(
-        waybill_number=record.waybill_number,
-        status_code=record.status_code,
-        status=record.status,
-        origin=record.origin,
-        destination=record.destination,
-        last_updated=record.last_updated,
-        error_message=record.error_message
+    return record
+
+
+@router.get("/usage", response_model=APIUsageResponse, summary="Get API Usage Statistics")
+async def get_api_usage(db: Session = Depends(get_db)):
+    """
+    Get current API usage statistics for today
+    
+    Shows:
+    - Requests used today
+    - Requests remaining
+    - Daily limit
+    - Percentage used
+    """
+    api_usage_repo = APIUsageRepository(db)
+    usage = api_usage_repo.get_or_create_today()
+    remaining = api_usage_repo.get_remaining_requests(settings.DHL_DAILY_LIMIT)
+    percentage = (usage.request_count / settings.DHL_DAILY_LIMIT) * 100
+    
+    return APIUsageResponse(
+        date=usage.date,
+        requests_used=usage.request_count,
+        requests_remaining=remaining,
+        daily_limit=settings.DHL_DAILY_LIMIT,
+        percentage_used=round(percentage, 2)
     )
 
-
-@router.get(
-    "/history",
-    response_model=List[TrackingInfo],
-    summary="Get all tracking history",
-    description="Retrieve all tracking records from database"
-)
-async def get_all_tracking_history(
-    limit: int = 100,
-    offset: int = 0,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Get all tracking history with pagination
-    
-    - *limit*: Maximum number of records to return (default: 100)
-    - *offset*: Number of records to skip (default: 0)
-    """
-    tracking_repo = TrackingRepository(db)
-    records = await tracking_repo.get_all_trackings(limit, offset)
-    
-    return [
-        TrackingInfo(
-            waybill_number=record.waybill_number,
-            status_code=record.status_code,
-            status=record.status,
-            origin=record.origin,
-            destination=record.destination,
-            last_updated=record.last_updated,
-            error_message=record.error_message
-        )
-        for record in records
-    ]
-
-
-@router.get(
-    "/health",
-    response_model=HealthResponse,
-    summary="Health check",
-    description="Check API health and usage statistics"
-)
-async def health_check(
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings)
-):
-    """
-    Health check endpoint
-    
-    Returns system status and API usage information
-    """
-    usage_repo = APIUsageRepository(db)
-    requests_today = await usage_repo.get_today_request_count()
-    
-    return HealthResponse(
-        status="healthy",
-        version=settings.APP_VERSION,
-        timestamp=time.time(),
-        database_connected=True,
-        api_requests_today=requests_today,
-        api_limit_remaining=settings.DHL_DAILY_LIMIT - requests_today
-    )
