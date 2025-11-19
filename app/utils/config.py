@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./data/dhl_tracking.db"
     
     # File Processing Settings
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB and can be adjusted if one requeres
     ALLOWED_EXTENSIONS: list = [".csv", ".xlsx", ".xls"]
     UPLOAD_DIR: str = "./data/uploads"
     EXPORT_DIR: str = "./exports"
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     LOG_FILE: str = "./data/app.log"
     
     class Config:
-        env_file = ".env"
+        env_file = ".env" #or env_file = ".env.example"
         case_sensitive = True
 
 
