@@ -1,6 +1,6 @@
 """
-Batch processor for handling multiple tracking requests efficiently
-Implements intelligent batching and rate limiting
+Enhanced batch processor with intelligent retry logic
+Implements 20-waybill batching with 7-second delays and automatic retry for failed requests
 """
 import asyncio
 from typing import List, Dict, Any, Optional
@@ -17,13 +17,14 @@ logger = logging.getLogger(__name__)
 
 class BatchProcessor:
     """
-    Intelligent batch processor for tracking requests
-    Manages DHL API rate limits and optimizes request patterns
+    Intelligent batch processor with retry logic for failed requests
+    Processes tracking requests in batches of 20 with 7-second delays
     """
     
     def __init__(self, dhl_service: DHLAPIService):
         self.dhl_service = dhl_service
-        self.batch_size = settings.DHL_BATCH_SIZE
+        self.batch_size = 20  # Industry standard for rate limiting
+        self.batch_delay = 7  # 7 seconds between batches
         self.daily_limit = settings.DHL_DAILY_LIMIT
     
     def generate_batch_id(self) -> str:
@@ -39,7 +40,7 @@ class BatchProcessor:
         api_usage_repo: APIUsageRepository
     ) -> Dict[str, Any]:
         """
-        Process a batch of tracking numbers intelligently
+        Process a batch of tracking numbers with automatic retry for failures
         
         Args:
             tracking_numbers: List of tracking numbers to process
@@ -47,7 +48,7 @@ class BatchProcessor:
             api_usage_repo: Repository for API usage tracking
             
         Returns:
-            Dictionary with batch processing results
+            Dictionary with batch processing results (appears as single attempt to user)
         """
         start_time = datetime.now()
         batch_id = self.generate_batch_id()
@@ -98,13 +99,52 @@ class BatchProcessor:
                 else:
                     new_tracking_numbers.append(tn)
             
-            # Process new tracking numbers via API
+            # Process new tracking numbers in batches of 20 with 7-second delays
             if new_tracking_numbers:
-                logger.info(f"Processing {len(new_tracking_numbers)} new tracking numbers")
-                api_results = await self.dhl_service.track_batch(new_tracking_numbers)
+                logger.info(f"Processing {len(new_tracking_numbers)} new tracking numbers in batches of {self.batch_size}")
                 
-                # Update database with new results
-                for api_result in api_results:
+                all_api_results = []
+                failed_tracking_numbers = []
+                
+                # First pass: Process in batches of 20
+                for i in range(0, len(new_tracking_numbers), self.batch_size):
+                    batch = new_tracking_numbers[i:i + self.batch_size]
+                    batch_num = (i // self.batch_size) + 1
+                    total_batches = (len(new_tracking_numbers) + self.batch_size - 1) // self.batch_size
+                    
+                    logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} waybills)")
+                    
+                    # Process this batch
+                    batch_results = await self.dhl_service.track_batch(batch, delay=0.2)
+                    all_api_results.extend(batch_results)
+                    
+                    # Collect failed ones for retry
+                    for result in batch_results:
+                        if not result.get('is_successful'):
+                            failed_tracking_numbers.append(result.get('tracking_number'))
+                    
+                    # Wait 7 seconds before next batch (except for last batch)
+                    if i + self.batch_size < len(new_tracking_numbers):
+                        logger.info(f"Waiting {self.batch_delay} seconds before next batch...")
+                        await asyncio.sleep(self.batch_delay)
+                
+                # Second pass: Retry failed waybills (automatic retry in background)
+                if failed_tracking_numbers:
+                    logger.info(f"Retrying {len(failed_tracking_numbers)} failed waybills...")
+                    await asyncio.sleep(self.batch_delay)  # Wait before retry
+                    
+                    retry_results = await self.dhl_service.track_batch(failed_tracking_numbers, delay=0.5)
+                    
+                    # Replace failed results with retry results
+                    retry_map = {r['tracking_number']: r for r in retry_results}
+                    for i, result in enumerate(all_api_results):
+                        if result['tracking_number'] in retry_map:
+                            all_api_results[i] = retry_map[result['tracking_number']]
+                    
+                    logger.info(f"Retry completed for {len(failed_tracking_numbers)} waybills")
+                
+                # Save all results to database
+                for api_result in all_api_results:
                     try:
                         # Add batch ID
                         api_result['batch_id'] = batch_id
@@ -160,6 +200,7 @@ class BatchProcessor:
     ) -> Dict[str, Any]:
         """
         Process a large batch with progress updates
+        Uses the enhanced batch processor with retry logic
         
         Args:
             tracking_numbers: List of tracking numbers
@@ -168,47 +209,18 @@ class BatchProcessor:
             progress_callback: Optional callback for progress updates
             
         Returns:
-            Aggregated results from all sub-batches
+            Aggregated results from processing (appears as single operation)
         """
-        all_results = {
-            "total_requested": len(tracking_numbers),
-            "successful": 0,
-            "failed": 0,
-            "results": [],
-            "batch_ids": [],
-            "processing_time": 0,
-            "api_calls_made": 0
-        }
+        logger.info(f"Starting large batch processing for {len(tracking_numbers)} waybills")
         
-        start_time = datetime.now()
+        # Use the main batch processor which now handles everything
+        result = await self.process_batch(
+            tracking_numbers,
+            tracking_repo,
+            api_usage_repo
+        )
         
-        # Split into manageable batches
-        for i in range(0, len(tracking_numbers), self.batch_size):
-            batch = tracking_numbers[i:i + self.batch_size]
-            
-            # Process batch
-            batch_result = await self.process_batch(batch, tracking_repo, api_usage_repo)
-            
-            # Aggregate results
-            all_results["successful"] += batch_result["successful"]
-            all_results["failed"] += batch_result["failed"]
-            all_results["results"].extend(batch_result["results"])
-            all_results["batch_ids"].append(batch_result["batch_id"])
-            all_results["api_calls_made"] += batch_result["api_calls_made"]
-            
-            # Progress callback
-            if progress_callback:
-                progress = (i + len(batch)) / len(tracking_numbers) * 100
-                await progress_callback(progress, batch_result)
-            
-            # Delay between batches to respect rate limits
-            if i + self.batch_size < len(tracking_numbers):
-                await asyncio.sleep(1)  # 1 second delay between batches
-        
-        end_time = datetime.now()
-        all_results["processing_time"] = (end_time - start_time).total_seconds()
-        
-        return all_results
+        return result
     
     def calculate_estimated_time(self, count: int) -> float:
         """
@@ -220,7 +232,13 @@ class BatchProcessor:
         Returns:
             Estimated time in seconds
         """
-        # Estimate: ~0.5 seconds per request + batch overhead
+        # Calculate number of batches
         batches = (count + self.batch_size - 1) // self.batch_size
-        return (count * 0.5) + (batches * 1)  #  5 second between batches
+        
+        # Time = (batches * delay) + (count * 0.5 seconds per request) + retry buffer
+        base_time = (batches - 1) * self.batch_delay  # Delays between batches
+        processing_time = count * 0.5  # Approximate processing per waybill
+        retry_buffer = batches * 2  # Buffer for potential retries
+        
+        return base_time + processing_time + retry_buffer
 
