@@ -222,5 +222,5 @@ class BatchProcessor:
         """
         # Estimate: ~0.5 seconds per request + batch overhead
         batches = (count + self.batch_size - 1) // self.batch_size
-        return (count * 5) + (batches * 1)  #  5 second between batches
+        return (count * 0.5) + (batches * 1)  #  5 second between batches
 
