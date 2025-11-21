@@ -1,4 +1,13 @@
+# Environment files
 .env
 .env.example
-./data/dhl_tracking.db
-exports
+
+# Database
+data/*.db
+
+# Exports folder
+exports/
+
+# Python virtual environment
+Traker_Env_Venv/
+venv/
