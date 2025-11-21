@@ -1,6 +1,7 @@
 """
 Export services for generating PDF and DOCX reports
-Handles document generation with tracking information including status codes
+Handles document generation with tracking information
+NOW WITH SEPARATE Status Code and Status Description columns
 """
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 class ExportService:
     """
     Service for exporting tracking data to PDF and DOCX
-    NOW WITH STATUS CODE COLUMN!
+    Features separate Status Code and Status Description columns
     """
     
     def __init__(self):
@@ -40,7 +41,7 @@ class ExportService:
     
     def generate_pdf(self, tracking_records: List[TrackingRecord], include_details: bool = True) -> str:
         """
-        Generate PDF report from tracking records with STATUS CODE column
+        Generate PDF report with SEPARATE Status Code and Status Description columns
         
         Args:
             tracking_records: List of TrackingRecord objects
@@ -75,43 +76,57 @@ class ExportService:
             elements.append(info)
             elements.append(Spacer(1, 0.3*inch))
             
-            # Table data - NOW WITH STATUS CODE!
+            # Table data with SEPARATE Status Code and Status Description
             if include_details:
-                # DETAILED TABLE: 6 columns including Status Code
-                data = [['Tracking #', 'Status Code', 'Status', 'Origin', 'Destination', 'Last Checked']]
+                # DETAILED: 7 columns (added Status Description as separate column)
+                data = [[
+                    'Tracking #', 
+                    'Status Code', 
+                    'Status Description',  # NEW SEPARATE COLUMN
+                    'Origin', 
+                    'Destination', 
+                    'Last Checked'
+                ]]
+                
                 for record in tracking_records:
                     data.append([
                         record.tracking_number,
-                        record.status_code or 'N/A',  # STATUS CODE COLUMN
-                        record.status or 'N/A',
+                        record.status_code or 'N/A',           # Status CODE (e.g., "101")
+                        record.status or 'N/A',                # Status DESCRIPTION (e.g., "In Transit")
                         record.origin or 'N/A',
                         record.destination or 'N/A',
                         record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
                     ])
             else:
-                # SIMPLE TABLE: 4 columns including Status Code
-                data = [['Tracking #', 'Status Code', 'Status', 'Last Checked']]
+                # SIMPLE: 5 columns (both status fields included)
+                data = [[
+                    'Tracking #', 
+                    'Status Code', 
+                    'Status Description',  # NEW SEPARATE COLUMN
+                    'Last Checked'
+                ]]
+                
                 for record in tracking_records:
                     data.append([
                         record.tracking_number,
-                        record.status_code or 'N/A',  # STATUS CODE COLUMN
-                        record.status or 'N/A',
+                        record.status_code or 'N/A',           # Status CODE
+                        record.status or 'N/A',                # Status DESCRIPTION
                         record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
                     ])
             
-            # Create table
+            # Create table with adjusted column widths
             table = Table(data)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
                 ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
             ]))
@@ -120,7 +135,7 @@ class ExportService:
             
             # Build PDF
             doc.build(elements)
-            logger.info(f"PDF generated with STATUS CODE column: {filename}")
+            logger.info(f"PDF generated with separate Status Code and Status Description: {filename}")
             return filename
             
         except Exception as e:
@@ -129,7 +144,7 @@ class ExportService:
     
     def generate_docx(self, tracking_records: List[TrackingRecord], include_details: bool = True) -> str:
         """
-        Generate DOCX report from tracking records with STATUS CODE column
+        Generate DOCX report with SEPARATE Status Code and Status Description columns
         
         Args:
             tracking_records: List of TrackingRecord objects
@@ -152,55 +167,69 @@ class ExportService:
             info_para.add_run(f"Total Records: {len(tracking_records)}").bold = True
             doc.add_paragraph()  # Spacer
             
-            # Create table - NOW WITH STATUS CODE!
+            # Create table with SEPARATE Status Code and Status Description
             if include_details:
-                # DETAILED TABLE: 6 columns
-                table = doc.add_table(rows=1, cols=6)
+                # DETAILED: 7 columns
+                table = doc.add_table(rows=1, cols=7)
                 table.style = 'Light Grid Accent 1'
                 
                 # Header row
                 header_cells = table.rows[0].cells
-                headers = ['Tracking #', 'Status Code', 'Status', 'Origin', 'Destination', 'Last Checked']
+                headers = [
+                    'Tracking #', 
+                    'Status Code', 
+                    'Status Description',  # NEW SEPARATE COLUMN
+                    'Origin', 
+                    'Destination', 
+                    'Last Checked'
+                ]
+                
                 for idx, header in enumerate(headers):
                     cell = header_cells[idx]
                     cell.text = header
                     cell.paragraphs[0].runs[0].font.bold = True
-                    cell.paragraphs[0].runs[0].font.size = Pt(11)
+                    cell.paragraphs[0].runs[0].font.size = Pt(10)
                 
                 # Data rows
                 for record in tracking_records:
                     row_cells = table.add_row().cells
                     row_cells[0].text = record.tracking_number
-                    row_cells[1].text = record.status_code or 'N/A'  # STATUS CODE COLUMN
-                    row_cells[2].text = record.status or 'N/A'
+                    row_cells[1].text = record.status_code or 'N/A'      # Status CODE
+                    row_cells[2].text = record.status or 'N/A'           # Status DESCRIPTION
                     row_cells[3].text = record.origin or 'N/A'
                     row_cells[4].text = record.destination or 'N/A'
                     row_cells[5].text = record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
             else:
-                # SIMPLE TABLE: 4 columns
-                table = doc.add_table(rows=1, cols=4)
+                # SIMPLE: 5 columns
+                table = doc.add_table(rows=1, cols=5)
                 table.style = 'Light Grid Accent 1'
                 
                 # Header row
                 header_cells = table.rows[0].cells
-                headers = ['Tracking #', 'Status Code', 'Status', 'Last Checked']
+                headers = [
+                    'Tracking #', 
+                    'Status Code', 
+                    'Status Description',  # NEW SEPARATE COLUMN
+                    'Last Checked'
+                ]
+                
                 for idx, header in enumerate(headers):
                     cell = header_cells[idx]
                     cell.text = header
                     cell.paragraphs[0].runs[0].font.bold = True
-                    cell.paragraphs[0].runs[0].font.size = Pt(11)
+                    cell.paragraphs[0].runs[0].font.size = Pt(10)
                 
                 # Data rows
                 for record in tracking_records:
                     row_cells = table.add_row().cells
                     row_cells[0].text = record.tracking_number
-                    row_cells[1].text = record.status_code or 'N/A'  # STATUS CODE COLUMN
-                    row_cells[2].text = record.status or 'N/A'
+                    row_cells[1].text = record.status_code or 'N/A'      # Status CODE
+                    row_cells[2].text = record.status or 'N/A'           # Status DESCRIPTION
                     row_cells[3].text = record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
             
             # Save document
             doc.save(filename)
-            logger.info(f"DOCX generated with STATUS CODE column: {filename}")
+            logger.info(f"DOCX generated with separate Status Code and Status Description: {filename}")
             return filename
             
         except Exception as e:

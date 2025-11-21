@@ -23,8 +23,8 @@ class BatchProcessor:
     
     def __init__(self, dhl_service: DHLAPIService):
         self.dhl_service = dhl_service
-        self.batch_size = 20  # Industry standard for rate limiting
-        self.batch_delay = 7  # 7 seconds between batches
+        self.batch_size = 10  # Industry standard for rate limiting
+        self.batch_delay = 10  # 7 seconds between batches
         self.daily_limit = settings.DHL_DAILY_LIMIT
     
     def generate_batch_id(self) -> str:
@@ -238,7 +238,7 @@ class BatchProcessor:
         # Time = (batches * delay) + (count * 0.5 seconds per request) + retry buffer
         base_time = (batches - 1) * self.batch_delay  # Delays between batches
         processing_time = count * 0.5  # Approximate processing per waybill
-        retry_buffer = batches * 2  # Buffer for potential retries
+        retry_buffer = batches * 3  # Buffer for potential retries
         
         return base_time + processing_time + retry_buffer
 
