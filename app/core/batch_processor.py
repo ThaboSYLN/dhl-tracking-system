@@ -401,4 +401,3 @@ class BatchProcessor:
         total = base_time + processing_time + retry_buffer
         
         return total
-
