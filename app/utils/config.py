@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     DHL_API_KEY: str = Field(..., description="DHL API Key")
     DHL_API_URL: str = "https://api-eu.dhl.com/track/shipments"
     DHL_DAILY_LIMIT: int = 250
-    DHL_BATCH_SIZE: int = 25  # Process 25 tracking numbers per batch
+    DHL_BATCH_SIZE: int = 10  # Process 25 tracking numbers per batch
     
     # Database Configuration
     DATABASE_URL: str = "sqlite:///./data/dhl_tracking.db"

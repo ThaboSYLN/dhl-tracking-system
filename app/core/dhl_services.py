@@ -88,7 +88,7 @@ class DHLAPIService:
                 "error_message": str(e)
             }
     
-    async def track_batch(self, tracking_numbers: List[str], delay: float = 0.1) -> List[Dict[str, Any]]:
+    async def track_batch(self, tracking_numbers: List[str], delay: float = 10.0) -> List[Dict[str, Any]]:   #changed delay  from 0.1 sec to  10 second --hope it will work
         """
         Track multiple shipments with rate limiting
         

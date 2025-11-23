@@ -115,7 +115,7 @@ class BatchProcessor:
                     logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} waybills)")
                     
                     # Process this batch
-                    batch_results = await self.dhl_service.track_batch(batch, delay=0.2)
+                    batch_results = await self.dhl_service.track_batch(batch, delay=10.0)
                     all_api_results.extend(batch_results)
                     
                     # Collect failed ones for retry
@@ -133,7 +133,7 @@ class BatchProcessor:
                     logger.info(f"Retrying {len(failed_tracking_numbers)} failed waybills...")
                     await asyncio.sleep(self.batch_delay)  # Wait before retry
                     
-                    retry_results = await self.dhl_service.track_batch(failed_tracking_numbers, delay=0.5)
+                    retry_results = await self.dhl_service.track_batch(failed_tracking_numbers, delay=10.0)
                     
                     # Replace failed results with retry results
                     retry_map = {r['tracking_number']: r for r in retry_results}
@@ -241,4 +241,4 @@ class BatchProcessor:
         retry_buffer = batches * 3  # Buffer for potential retries
         
         return base_time + processing_time + retry_buffer
-
+   
