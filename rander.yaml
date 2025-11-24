@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: dhl-tracking-api
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DHL_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dhl-tracking-db
+          property: connectionString
+    autoDeploy: true
+
+databases:
+  - name: dhl-tracking-db
+    plan: free
+    databaseName: dhl_tracking
+    user: dhl_user
+

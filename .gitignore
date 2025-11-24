@@ -2,8 +2,16 @@
 .env
 .env.example
 
+#Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
 # Database
-#data/*.db
+data/*.db
+*.log
 
 # Exports folder
 exports/
@@ -11,3 +19,16 @@ exports/
 # Python virtual environment
 Traker_Env_Venv/
 venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
