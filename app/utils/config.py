@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: list = [".csv", ".xlsx", ".xls"]
     UPLOAD_DIR: str = "./data/uploads"
     EXPORT_DIR: str = "./exports"
-    
+    ##
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     
