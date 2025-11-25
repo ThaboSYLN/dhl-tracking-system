@@ -7,7 +7,7 @@ python-multipart==0.0.6
 sqlalchemy==2.0.25
 alembic==1.13.1
 aiosqlite==0.19.0
-
+ #Traker_Env_Venv/bin/activate
 #Processing datavase
 pandas
 openpyxl==3.1.2  #for input file with waybill
