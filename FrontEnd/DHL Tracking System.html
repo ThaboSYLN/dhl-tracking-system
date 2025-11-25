@@ -291,14 +291,15 @@
         </header>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('single')">Single Track</button>
-            <button class="tab" onclick="switchTab('bulk')">Bulk Track</button>
-            <button class="tab" onclick="switchTab('upload')">File Upload</button>
-            <button class="tab" onclick="switchTab('export')">Export Data</button>
-            <button class="tab" onclick="switchTab('history')">History</button>
-            <button class="tab" onclick="switchTab('usage')">API Usage</button>
-            <button class="tab" onclick="switchTab('stats')">Statistics</button>
-            <button class="tab" onclick="switchTab('health')">Health Check</button>
+            <button class="tab active" onclick="switchTab(event, 'single')">Single Track</button>
+            <button class="tab" onclick="switchTab(event, 'bulk')">Bulk Track</button>
+            <button class="tab" onclick="switchTab(event, 'upload')">File Upload</button>
+            <button class="tab" onclick="switchTab(event, 'batchstatus')">Batch Status</button>
+            <button class="tab" onclick="switchTab(event, 'export')">Export Data</button>
+            <button class="tab" onclick="switchTab(event, 'history')">History</button>
+            <button class="tab" onclick="switchTab(event, 'usage')">API Usage</button>
+            <button class="tab" onclick="switchTab(event, 'stats')">Statistics</button>
+            <button class="tab" onclick="switchTab(event, 'health')">Health Check</button>
         </div>
 
         <div class="content">
@@ -351,6 +352,21 @@
                 <button onclick="uploadFile()">Process File</button>
                 
                 <div id="uploadResponse"></div>
+            </div>
+
+            <!-- Batch Status -->
+            <div id="batchstatus" class="tab-content">
+                <h2>Check Batch Status</h2>
+                <p style="margin-bottom: 20px; color: #666;">Retrieve the status of a batch processing job using the batch ID.</p>
+                
+                <div class="form-group">
+                    <label for="batchId">Batch ID</label>
+                    <input type="text" id="batchId" placeholder="e.g., batch_123456789">
+                </div>
+
+                <button onclick="getBatchStatus()">Get Batch Status</button>
+                
+                <div id="batchstatusResponse"></div>
             </div>
 
             <!-- Export Data -->
@@ -435,7 +451,10 @@
         }
 
         // Switch between tabs
-        function switchTab(tabName) {
+        function switchTab(event, tabName) {
+            // Prevent default behavior
+            event.preventDefault();
+            
             // Hide all tab contents
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
@@ -448,7 +467,7 @@
             document.getElementById(tabName).classList.add('active');
 
             // Add active to clicked tab
-            event.target.classList.add('active');
+            event.currentTarget.classList.add('active');
         }
 
         // Display response helper
@@ -555,6 +574,54 @@
                 displayResponse('uploadResponse', data, !response.ok);
             } catch (error) {
                 displayResponse('uploadResponse', { error: error.message }, true);
+            }
+        }
+
+        // Get Batch Status
+        async function getBatchStatus() {
+            const batchId = document.getElementById('batchId').value.trim();
+
+            if (!batchId) {
+                displayResponse('batchstatusResponse', { error: 'Please enter a batch ID' }, true);
+                return;
+            }
+
+            showLoading('batchstatusResponse');
+
+            try {
+                const response = await fetch(`${getApiUrl()}/api/v1/tracking/batch/${batchId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('batchstatusResponse').innerHTML = `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h4>Status</h4>
+                                <div class="value" style="font-size: 20px;">${data.status}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Total Numbers</h4>
+                                <div class="value">${data.total_tracking_numbers}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Processed</h4>
+                                <div class="value">${data.processed_count}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Progress</h4>
+                                <div class="value">${Math.round((data.processed_count / data.total_tracking_numbers) * 100)}%</div>
+                            </div>
+                        </div>
+                        <div class="response-box">
+                            <h3>Full Response:</h3>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    displayResponse('batchstatusResponse', data, true);
+                }
+            } catch (error) {
+                displayResponse('batchstatusResponse', { error: error.message }, true);
             }
         }
 
