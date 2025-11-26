@@ -29,15 +29,21 @@ router = APIRouter(prefix="/tracking", tags=["Tracking"])
 batch_processor = BatchProcessor(dhl_service)
 
 
-@router.post("/single", response_model=TrackingResponse, summary="Track Single Shipment")
+
+
+@router.get("/single/{tracking_number}", response_model=TrackingResponse, summary="Track Single Shipment")
 async def track_single_shipment(
-    request: TrackingNumberInput,
+    tracking_number: str,
     db: Session = Depends(get_db)
 ):
     """
     Track a single DHL shipment by tracking number
     
-    - **tracking_number**: DHL tracking/waybill number
+    **Usage:** Simply add the tracking number to the URL
+    
+    **Example:** `/api/v1/tracking/single/1234567890`
+    
+    - **tracking_number**: DHL tracking/waybill number (in URL path)
     
     Returns detailed tracking information including:
     - Current status
@@ -45,6 +51,15 @@ async def track_single_shipment(
     - Tracking timeline
     """
     try:
+        # Clean and validate tracking number
+        tracking_number = tracking_number.strip().upper()
+        
+        if not tracking_number or len(tracking_number) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid tracking number. Must be at least 5 characters."
+            )
+        
         tracking_repo = TrackingRepository(db)
         api_usage_repo = APIUsageRepository(db)
         
@@ -56,16 +71,16 @@ async def track_single_shipment(
             )
         
         # Check if we have recent cached data
-        existing = tracking_repo.get_by_tracking_number(request.tracking_number)
+        existing = tracking_repo.get_by_tracking_number(tracking_number)
         if existing and existing.last_checked:
             from datetime import datetime
             age_seconds = (datetime.utcnow() - existing.last_checked).seconds
             if age_seconds < 3600:  # Less than 1 hour old
-                logger.info(f"Returning cached data for {request.tracking_number}")
+                logger.info(f"Returning cached data for {tracking_number}")
                 return existing
         
         # Fetch from DHL API
-        result = await dhl_service.track_single(request.tracking_number)
+        result = await dhl_service.track_single(tracking_number)
         
         # Save to database
         record = tracking_repo.upsert(result)
@@ -80,6 +95,8 @@ async def track_single_shipment(
     except Exception as e:
         logger.error(f"Error tracking single shipment: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 
 
 @router.post("/bulk", response_model=BulkTrackingResponse, summary="Track Multiple Shipments")
