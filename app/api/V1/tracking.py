@@ -3,14 +3,18 @@ FastAPI endpoints for DHL tracking system
 Implements REST API following best practices
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.params import Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 import logging
+#from typing import List
+from pydantic import BaseModel
+
 
 from app.utils.database import get_db
 from app.models.schemas import (
-    TrackingNumberInput, TrackingResponse, BulkTrackingRequest,
+    PlainTextBulkRequest, PlainTextExportRequest, TrackingNumberInput, TrackingResponse, BulkTrackingRequest,
     BulkTrackingResponse, ExportRequest, ExportResponse, APIUsageResponse
 )
 from app.repositories import TrackingRepository, APIUsageRepository, ExportRepository
@@ -19,6 +23,30 @@ from app.core.file_processor import file_processor
 from app.core.export_services import export_service
 from app.core.batch_processor import BatchProcessor
 from app.utils.config import settings
+
+class ExportFileInfo(BaseModel):
+    """Information about an exported file"""
+    filename: str
+    file_path: str
+    created_at: str
+    file_size: str
+    record_count: int
+    export_type: str
+    download_url: str
+
+class Config:
+     json_schema_extra = {
+        "example": {
+            "filename": "tracking_report_20240115_103000.pdf",
+            "file_path": "./exports/tracking_report_20240115_103000.pdf",
+            "created_at": "2024-01-15 10:30:00",
+             "file_size": "245 KB",
+            "record_count": 5,
+            "export_type": "pdf",
+            "download_url": "/api/v1/tracking/download/tracking_report_20240115_103000.pdf"
+            }
+        }
+
 
 logger = logging.getLogger(__name__)
 
@@ -297,6 +325,188 @@ async def export_tracking_data(
         logger.error(f"Error exporting tracking data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
+
+
+
+
+# NEW ENDPOINT 1: List Recent Exports
+@router.get("/exports/recent", summary="List Recent Export Files")
+async def list_recent_exports(
+    limit: int = Query(default=10, ge=1, le=50, description="Number of files to show"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a list of recently exported files
+    
+    **Features:**
+    - Shows the last 10 export files by default (adjustable up to 50)
+    - Displays filename, creation time, file size, and record count
+    - Provides direct download URLs for each file
+    - Sorted by most recent first
+    
+    **Perfect for:** Finding that file you just exported without remembering the exact name!
+    """
+    try:
+        export_repo = ExportRepository(db)
+        
+        # Get recent exports from database
+        recent_exports = export_repo.get_recent(limit)
+        
+        if not recent_exports:
+            return {
+                "total": 0,
+                "exports": [],
+                "message": "No export files found"
+            }
+        
+        # Build file info list
+        export_files = []
+        for export in recent_exports:
+            import os
+            file_path = export.file_path
+            
+            # Check if file still exists
+            if not os.path.exists(file_path):
+                continue
+            
+            # Get file info
+            file_stats = os.stat(file_path)
+            file_size_bytes = file_stats.st_size
+            
+            # Format file size
+            if file_size_bytes < 1024:
+                file_size = f"{file_size_bytes} B"
+            elif file_size_bytes < 1024 * 1024:
+                file_size = f"{file_size_bytes / 1024:.1f} KB"
+            else:
+                file_size = f"{file_size_bytes / (1024 * 1024):.1f} MB"
+            
+            filename = os.path.basename(file_path)
+            
+            export_files.append(ExportFileInfo(
+                filename=filename,
+                file_path=file_path,
+                created_at=export.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                file_size=file_size,
+                record_count=export.record_count,
+                export_type=export.export_type,
+                download_url=f"/api/v1/tracking/download/{filename}"
+            ))
+        
+        return {
+            "total": len(export_files),
+            "exports": export_files,
+            "message": f"Found {len(export_files)} export file(s)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing exports: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list exports: {str(e)}")
+
+
+# KEEP THE EXISTING DOWNLOAD ENDPOINT (improved with better error messages)
+@router.get("/download/{filename}", summary="Download Export File")
+async def download_export_file(filename: str):
+    """
+    Download an exported tracking report
+    
+    **How to use:**
+    1. First, call `/api/v1/tracking/exports/recent` to see available files
+    2. Copy the filename from the list
+    3. Use this endpoint with that filename
+    
+    **Or:** Just use the `download_url` provided in the recent exports list!
+    
+    - **filename**: Name of the file to download
+    """
+    import os
+    file_path = os.path.join(settings.EXPORT_DIR, filename)
+    
+    # Security check: prevent directory traversal
+    if '..' in filename or '/' in filename or '\\' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404, 
+            detail=f"File not found. Use /api/v1/tracking/exports/recent to see available files."
+        )
+    
+    # Determine media type
+    if filename.endswith('.pdf'):
+        media_type = 'application/pdf'
+    elif filename.endswith('.docx'):
+        media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    else:
+        media_type = 'application/octet-stream'
+    
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        filename=filename
+    )
+
+
+# BONUS ENDPOINT: Download Latest Export
+@router.get("/download/latest/{export_type}", summary="Download Most Recent Export")
+async def download_latest_export(
+    export_type: str = Query(..., regex="^(pdf|docx)$", description="File type to download"),
+    db: Session = Depends(get_db)
+):
+    """
+    Download the most recently created export file of specified type
+    
+    **Super convenient!** No need to remember filenames.
+    
+    **Examples:**
+    - `/api/v1/tracking/download/latest/pdf` - Gets your latest PDF
+    - `/api/v1/tracking/download/latest/docx` - Gets your latest DOCX
+    
+    - **export_type**: 'pdf' or 'docx'
+    """
+    try:
+        export_repo = ExportRepository(db)
+        
+        # Get most recent export of this type
+        exports = export_repo.get_by_type(export_type)
+        
+        if not exports:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No {export_type.upper()} exports found"
+            )
+        
+        # Get the most recent one
+        latest_export = exports[0]
+        
+        import os
+        file_path = latest_export.file_path
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail="File was deleted or moved"
+            )
+        
+        filename = os.path.basename(file_path)
+        
+        # Determine media type
+        if export_type == 'pdf':
+            media_type = 'application/pdf'
+        else:
+            media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            filename=filename
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading latest export: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

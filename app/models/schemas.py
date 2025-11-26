@@ -89,6 +89,58 @@ class BulkTrackingRequest(BaseModel):
         }
 
 
+class PlainTextBulkRequest(BaseModel):
+    """
+    Request for bulk tracking with plain text input
+    Each tracking number on a new line
+    """
+    tracking_numbers_text: str = Field(
+        ..., 
+        description="Tracking numbers separated by newlines",
+        min_length=1
+    )
+    
+    @validator('tracking_numbers_text')
+    def parse_tracking_numbers(cls, v):
+        """Parse and validate tracking numbers from text"""
+        if not v or not v.strip():
+            raise ValueError("No tracking numbers provided")
+        
+        # Split by newlines and clean
+        lines = v.strip().split('\n')
+        tracking_numbers = []
+        
+        for line in lines:
+            # Clean each line
+            cleaned = line.strip().upper()
+            # Skip empty lines
+            if cleaned:
+                tracking_numbers.append(cleaned)
+        
+        if not tracking_numbers:
+            raise ValueError("No valid tracking numbers found")
+        
+        if len(tracking_numbers) > 1000:
+            raise ValueError("Maximum 1000 tracking numbers allowed")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique = []
+        for num in tracking_numbers:
+            if num not in seen:
+                seen.add(num)
+                unique.append(num)
+        
+        return unique
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "tracking_numbers_text": "1234567890\n0987654321\n1122334455"
+            }
+        }
+
+
 class BulkTrackingResponse(BaseModel):
     """Response for bulk tracking"""
     total_requested: int
@@ -127,6 +179,56 @@ class ExportRequest(BaseModel):
         }
 
 
+class PlainTextExportRequest(BaseModel):
+    """
+    Request for exporting tracking data with plain text input
+    Each tracking number on a new line
+    """
+    tracking_numbers_text: str = Field(
+        ..., 
+        description="Tracking numbers separated by newlines"
+    )
+    format: ExportFormat = ExportFormat.PDF
+    include_details: bool = True
+    
+    @validator('tracking_numbers_text')
+    def parse_tracking_numbers(cls, v):
+        """Parse and validate tracking numbers from text"""
+        if not v or not v.strip():
+            raise ValueError("No tracking numbers provided")
+        
+        # Split by newlines and clean
+        lines = v.strip().split('\n')
+        tracking_numbers = []
+        
+        for line in lines:
+            cleaned = line.strip().upper()
+            if cleaned:
+                tracking_numbers.append(cleaned)
+        
+        if not tracking_numbers:
+            raise ValueError("No valid tracking numbers found")
+        
+        # Remove duplicates
+        seen = set()
+        unique = []
+        for num in tracking_numbers:
+            if num not in seen:
+                seen.add(num)
+                unique.append(num)
+        
+        return unique
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "tracking_numbers_text": "1234567890\n0987654321",
+                "format": "pdf",
+                "include_details": True
+            }
+        }
+
+
 class ExportResponse(BaseModel):
     """Response for export operation"""
     success: bool
@@ -143,6 +245,30 @@ class ExportResponse(BaseModel):
                 "file_path": "/exports/tracking_report_20240115.pdf",
                 "file_name": "tracking_report_20240115.pdf",
                 "record_count": 5
+            }
+        }
+
+
+class ExportFileInfo(BaseModel):
+    """Information about an exported file"""
+    filename: str
+    file_path: str
+    created_at: str
+    file_size: str
+    record_count: int
+    export_type: str
+    download_url: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "filename": "tracking_report_20240115_103000.pdf",
+                "file_path": "./exports/tracking_report_20240115_103000.pdf",
+                "created_at": "2024-01-15 10:30:00",
+                "file_size": "245 KB",
+                "record_count": 5,
+                "export_type": "pdf",
+                "download_url": "/api/v1/tracking/download/tracking_report_20240115_103000.pdf"
             }
         }
 
