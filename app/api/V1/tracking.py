@@ -99,22 +99,38 @@ async def track_single_shipment(
 
 
 
+
+
 @router.post("/bulk", response_model=BulkTrackingResponse, summary="Track Multiple Shipments")
 async def track_bulk_shipments(
-    request: BulkTrackingRequest,
+    request: PlainTextBulkRequest,  # Changed from BulkTrackingRequest
     db: Session = Depends(get_db)
 ):
     """
     Track multiple DHL shipments in a single request
     
-    - **tracking_numbers**: List of tracking/waybill numbers (max 1000)
+    **How to use:**
+    - Enter tracking numbers in plain text
+    - Put each tracking number on a new line
+    - System automatically removes duplicates and empty lines
     
-    Intelligently batches requests to optimize API usage and respect rate limits.
-    Uses caching to minimize API calls for recently checked shipments.
+    **Example input:**
+    ```
+    1234567890
+    0987654321
+    1122334455
+    ```
+    
+    - Maximum 1000 tracking numbers per request
+    - Intelligently batches requests to optimize API usage
+    - Uses caching to minimize API calls for recently checked shipments
     """
     try:
         tracking_repo = TrackingRepository(db)
         api_usage_repo = APIUsageRepository(db)
+        
+        # Get the parsed tracking numbers from the validator
+        tracking_numbers = request.tracking_numbers_text
         
         # Check rate limits
         remaining = api_usage_repo.get_remaining_requests(settings.DHL_DAILY_LIMIT)
@@ -126,7 +142,7 @@ async def track_bulk_shipments(
         
         # Process batch
         results = await batch_processor.process_batch(
-            request.tracking_numbers,
+            tracking_numbers,
             tracking_repo,
             api_usage_repo
         )
@@ -145,6 +161,7 @@ async def track_bulk_shipments(
     except Exception as e:
         logger.error(f"Error tracking bulk shipments: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 
 @router.post("/upload", response_model=BulkTrackingResponse, summary="Upload and Track from File")
@@ -209,18 +226,27 @@ async def upload_and_track(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+
 @router.post("/export", response_model=ExportResponse, summary="Export Tracking Data")
 async def export_tracking_data(
-    request: ExportRequest,
+    request: PlainTextExportRequest,  # Changed from ExportRequest
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
     Export tracking data to PDF or DOCX format
     
-    - **tracking_numbers**: List of tracking numbers to include in export
-    - **format**: Export format ('pdf' or 'docx')
-    - **include_details**: Include detailed information (origin, destination, etc.)
+    **How to use:**
+    - Enter tracking numbers in plain text (one per line)
+    - Select format (pdf or docx)
+    - Choose whether to include detailed information
+    
+    **Example input:**
+    ```
+    1234567890
+    0987654321
+    1122334455
+    ```
     
     Returns a downloadable file with the tracking information formatted in a table.
     """
@@ -228,8 +254,11 @@ async def export_tracking_data(
         tracking_repo = TrackingRepository(db)
         export_repo = ExportRepository(db)
         
+        # Get parsed tracking numbers from validator
+        tracking_numbers = request.tracking_numbers_text
+        
         # Get tracking records
-        records = tracking_repo.get_multiple(request.tracking_numbers)
+        records = tracking_repo.get_multiple(tracking_numbers)
         
         if not records:
             raise HTTPException(status_code=404, detail="No tracking records found")
@@ -244,7 +273,7 @@ async def export_tracking_data(
         export_repo.create({
             "export_type": request.format,
             "file_path": file_path,
-            "tracking_numbers": request.tracking_numbers,
+            "tracking_numbers": tracking_numbers,
             "record_count": len(records)
         })
         
@@ -267,6 +296,8 @@ async def export_tracking_data(
     except Exception as e:
         logger.error(f"Error exporting tracking data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
 
 
 @router.get("/download/{filename}", summary="Download Export File")
