@@ -2,8 +2,8 @@
 FastAPI endpoints for DHL tracking system
 Implements REST API following best practices
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
-from fastapi.params import Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks,Query,Path
+#from fastapi.params import Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -450,7 +450,7 @@ async def download_export_file(filename: str):
 # BONUS ENDPOINT: Download Latest Export
 @router.get("/download/latest/{export_type}", summary="Download Most Recent Export")
 async def download_latest_export(
-    export_type: str = Query(..., regex="^(pdf|docx)$", description="File type to download"),
+    export_type: str = Path(..., regex="^(pdf|docx)$", description="File type to download"),
     db: Session = Depends(get_db)
 ):
     """
