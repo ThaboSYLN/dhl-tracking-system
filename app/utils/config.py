@@ -45,10 +45,14 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "./data/app.log"
+
+    # Optional: Team leader emails (you can hardcode or move to DB later)
+    TEAM_LEADER_EMAILS: list[str] = ["leader1@yourcompany.com", "leader2@yourcompany.com"]
     
     class Config:
         env_file = ".env" #or env_file = ".env.example"
         case_sensitive = True
+        extra = "ignore"
 
 
 @lru_cache()
