@@ -1,7 +1,6 @@
 """
 Export services for generating PDF and DOCX reports
 Handles document generation with tracking information
-NOW WITH SEPARATE Status Code and Status Description columns
 """
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
@@ -26,12 +25,33 @@ logger = logging.getLogger(__name__)
 class ExportService:
     """
     Service for exporting tracking data to PDF and DOCX
-    Features separate Status Code and Status Description columns
     """
     
     def __init__(self):
         self.export_dir = settings.EXPORT_DIR
         Path(self.export_dir).mkdir(parents=True, exist_ok=True)
+    
+    def _get_last_event_date(self, record: TrackingRecord) -> str:
+        """Extract the most recent event timestamp from tracking details"""
+        try:
+            if record.tracking_details and isinstance(record.tracking_details, dict):
+                events = record.tracking_details.get('events', [])
+                
+                if events and len(events) > 0:
+                    most_recent_event = events[0]
+                    timestamp = most_recent_event.get('timestamp')
+                    
+                    if timestamp:
+                        return timestamp
+            
+            if record.last_checked:
+                return record.last_checked.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+            
+            return 'N/A'
+            
+        except Exception as e:
+            logger.error(f"Error extracting last event date: {str(e)}")
+            return 'N/A'
     
     def generate_filename(self, format: str) -> str:
         """Generate unique filename for export"""
@@ -41,7 +61,7 @@ class ExportService:
     
     def generate_pdf(self, tracking_records: List[TrackingRecord], include_details: bool = True) -> str:
         """
-        Generate PDF report with SEPARATE Status Code and Status Description columns
+        Generate PDF report
         
         Args:
             tracking_records: List of TrackingRecord objects
@@ -76,45 +96,41 @@ class ExportService:
             elements.append(info)
             elements.append(Spacer(1, 0.3*inch))
             
-            # Table data with SEPARATE Status Code and Status Description
+            # Table data - REMOVED Status Description, ADDED Last Event Date
             if include_details:
-                # DETAILED: 7 columns (added Status Description as separate column)
                 data = [[
                     'Tracking #', 
                     'Status Code', 
-                    'Status Description',  # NEW SEPARATE COLUMN
                     'Origin', 
                     'Destination', 
-                    'Last Checked'
+                    'Last Event Date'
                 ]]
                 
                 for record in tracking_records:
+                    last_event_date = self._get_last_event_date(record)
                     data.append([
                         record.tracking_number,
-                        record.status_code or 'N/A',           # Status CODE (e.g., "101")
-                        record.status or 'N/A',                # Status DESCRIPTION (e.g., "In Transit")
+                        record.status_code or 'N/A',
                         record.origin or 'N/A',
                         record.destination or 'N/A',
-                        record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
+                        last_event_date
                     ])
             else:
-                # SIMPLE: 5 columns (both status fields included)
                 data = [[
                     'Tracking #', 
                     'Status Code', 
-                    'Status Description',  # NEW SEPARATE COLUMN
-                    'Last Checked'
+                    'Last Event Date'
                 ]]
                 
                 for record in tracking_records:
+                    last_event_date = self._get_last_event_date(record)
                     data.append([
                         record.tracking_number,
-                        record.status_code or 'N/A',           # Status CODE
-                        record.status or 'N/A',                # Status DESCRIPTION
-                        record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
+                        record.status_code or 'N/A',
+                        last_event_date
                     ])
             
-            # Create table with adjusted column widths
+            # Create table
             table = Table(data)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
@@ -135,7 +151,7 @@ class ExportService:
             
             # Build PDF
             doc.build(elements)
-            logger.info(f"PDF generated with separate Status Code and Status Description: {filename}")
+            logger.info(f"PDF generated: {filename}")
             return filename
             
         except Exception as e:
@@ -144,7 +160,7 @@ class ExportService:
     
     def generate_docx(self, tracking_records: List[TrackingRecord], include_details: bool = True) -> str:
         """
-        Generate DOCX report with SEPARATE Status Code and Status Description columns
+        Generate DOCX report
         
         Args:
             tracking_records: List of TrackingRecord objects
@@ -167,40 +183,8 @@ class ExportService:
             info_para.add_run(f"Total Records: {len(tracking_records)}").bold = True
             doc.add_paragraph()  # Spacer
             
-            # Create table with SEPARATE Status Code and Status Description
+            # Create table - REMOVED Status Description, ADDED Last Event Date
             if include_details:
-                # DETAILED: 7 columns
-                table = doc.add_table(rows=1, cols=7)
-                table.style = 'Light Grid Accent 1'
-                
-                # Header row
-                header_cells = table.rows[0].cells
-                headers = [
-                    'Tracking #', 
-                    'Status Code', 
-                    'Status Description',  # NEW SEPARATE COLUMN
-                    'Origin', 
-                    'Destination', 
-                    'Last Checked'
-                ]
-                
-                for idx, header in enumerate(headers):
-                    cell = header_cells[idx]
-                    cell.text = header
-                    cell.paragraphs[0].runs[0].font.bold = True
-                    cell.paragraphs[0].runs[0].font.size = Pt(10)
-                
-                # Data rows
-                for record in tracking_records:
-                    row_cells = table.add_row().cells
-                    row_cells[0].text = record.tracking_number
-                    row_cells[1].text = record.status_code or 'N/A'      # Status CODE
-                    row_cells[2].text = record.status or 'N/A'           # Status DESCRIPTION
-                    row_cells[3].text = record.origin or 'N/A'
-                    row_cells[4].text = record.destination or 'N/A'
-                    row_cells[5].text = record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
-            else:
-                # SIMPLE: 5 columns
                 table = doc.add_table(rows=1, cols=5)
                 table.style = 'Light Grid Accent 1'
                 
@@ -209,8 +193,9 @@ class ExportService:
                 headers = [
                     'Tracking #', 
                     'Status Code', 
-                    'Status Description',  # NEW SEPARATE COLUMN
-                    'Last Checked'
+                    'Origin', 
+                    'Destination', 
+                    'Last Event Date'
                 ]
                 
                 for idx, header in enumerate(headers):
@@ -221,15 +206,42 @@ class ExportService:
                 
                 # Data rows
                 for record in tracking_records:
+                    last_event_date = self._get_last_event_date(record)
                     row_cells = table.add_row().cells
                     row_cells[0].text = record.tracking_number
-                    row_cells[1].text = record.status_code or 'N/A'      # Status CODE
-                    row_cells[2].text = record.status or 'N/A'           # Status DESCRIPTION
-                    row_cells[3].text = record.last_checked.strftime('%Y-%m-%d %H:%M') if record.last_checked else 'N/A'
+                    row_cells[1].text = record.status_code or 'N/A'
+                    row_cells[2].text = record.origin or 'N/A'
+                    row_cells[3].text = record.destination or 'N/A'
+                    row_cells[4].text = last_event_date
+            else:
+                table = doc.add_table(rows=1, cols=3)
+                table.style = 'Light Grid Accent 1'
+                
+                # Header row
+                header_cells = table.rows[0].cells
+                headers = [
+                    'Tracking #', 
+                    'Status Code', 
+                    'Last Event Date'
+                ]
+                
+                for idx, header in enumerate(headers):
+                    cell = header_cells[idx]
+                    cell.text = header
+                    cell.paragraphs[0].runs[0].font.bold = True
+                    cell.paragraphs[0].runs[0].font.size = Pt(10)
+                
+                # Data rows
+                for record in tracking_records:
+                    last_event_date = self._get_last_event_date(record)
+                    row_cells = table.add_row().cells
+                    row_cells[0].text = record.tracking_number
+                    row_cells[1].text = record.status_code or 'N/A'
+                    row_cells[2].text = last_event_date
             
             # Save document
             doc.save(filename)
-            logger.info(f"DOCX generated with separate Status Code and Status Description: {filename}")
+            logger.info(f"DOCX generated: {filename}")
             return filename
             
         except Exception as e:

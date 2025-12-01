@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHL Tracking System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DHL Tracking System</h1>
+            <p class="subtitle">Track and manage your shipments</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="tracking">Tracking</button>
+            <button class="tab-button" data-tab="export">Export</button>
+            <button class="tab-button" data-tab="statistics">Statistics</button>
+        </div>
+
+        <!-- Tracking Tab -->
+        <div class="tab-content active" id="tracking">
+            <div class="section">
+                <h2>Track Single Shipment</h2>
+                <div class="form-group">
+                    <label for="single-tracking">Tracking Number</label>
+                    <input type="text" id="single-tracking" placeholder="Enter tracking number">
+                    <button onclick="trackSingle()">Track</button>
+                </div>
+                <div id="single-result" class="result-container"></div>
+            </div>
+
+            <div class="section">
+                <h2>Upload File</h2>
+                <div class="form-group">
+                    <label for="file-upload">Upload CSV or Excel file</label>
+                    <input type="file" id="file-upload" accept=".csv,.xlsx,.xls">
+                    <button onclick="uploadFile()">Process File</button>
+                </div>
+                <div id="upload-result" class="result-container"></div>
+            </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div class="tab-content" id="export">
+            <div class="section">
+                <h2>List Recent Export Files</h2>
+                <div class="form-group">
+                    <label for="export-limit">Number of files to show</label>
+                    <input type="number" id="export-limit" value="10" min="1" max="50">
+                    <button onclick="listRecentExports()">List Files</button>
+                </div>
+                <div id="export-list" class="result-container"></div>
+            </div>
+
+            <div class="section">
+                <h2>Export Recent Files</h2>
+                <div class="form-group">
+                    <label for="export-tracking">Tracking Numbers (one per line)</label>
+                    <textarea id="export-tracking" rows="6" placeholder="1234567890&#10;0987654321&#10;1122334455"></textarea>
+                    <div class="inline-group">
+                        <select id="export-format">
+                            <option value="pdf">PDF</option>
+                            <option value="docx">DOCX</option>
+                        </select>
+                        <label>
+                            <input type="checkbox" id="export-details" checked> Include Details
+                        </label>
+                    </div>
+                    <button onclick="exportFiles()">Export</button>
+                </div>
+                <div id="export-result" class="result-container"></div>
+            </div>
+
+            <div class="section">
+                <h2>Export Batch Results</h2>
+                <div class="form-group">
+                    <label for="batch-id">Batch ID</label>
+                    <input type="text" id="batch-id" placeholder="Enter batch ID">
+                    <select id="batch-format">
+                        <option value="pdf">PDF</option>
+                        <option value="docx">DOCX</option>
+                    </select>
+                    <button onclick="exportBatch()">Export Batch</button>
+                </div>
+                <div id="batch-export-result" class="result-container"></div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div class="tab-content" id="statistics">
+            <div class="section">
+                <h2>System Statistics</h2>
+                <button onclick="getStatistics()">Refresh Statistics</button>
+                <div id="stats-result" class="result-container"></div>
+            </div>
+
+            <div class="section">
+                <h2>API Usage</h2>
+                <button onclick="getApiUsage()">Check API Usage</button>
+                <div id="usage-result" class="result-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        console.log('JavaScript loaded successfully');
+        console.log('API Base URL:', API_BASE_URL);
+    </script>
+</body>
+</html>
+
