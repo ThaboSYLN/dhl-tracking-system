@@ -1,68 +1,68 @@
 """
 Configuration management using Pydantic Settings
-Follows best practices for environment variable management
 """
-from pydantic_settings import BaseSettings
-from pydantic import Field
 from functools import lru_cache
-from typing import Optional
+from typing import List
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """
-    Application settings loaded from environment variables
-    Uses .env file for local development
-    """
-    
-    # Application Settings
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # Application
     APP_NAME: str = "DHL Tracking System"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
-    
-    # API Settings
-    API_V1_PREFIX: str = "/api/v1"
+    LOG_LEVEL: str = "INFO"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    
-    # DHL API Configuration
-    DHL_API_KEY: str = Field(..., description="DHL API Key")
+
+    # API
+    API_V1_PREFIX: str = "/api/v1"          # ← THIS WAS MISSING
+    PROJECT_NAME: str = "DHL Tracking API"  # ← also often used
+
+    # DHL API
+    DHL_API_KEY: str
     DHL_API_URL: str = "https://api-eu.dhl.com/track/shipments"
     DHL_DAILY_LIMIT: int = 250
-    DHL_BATCH_SIZE: int = 10  # Process 25 tracking numbers per batch
-    
-    # Database Configuration
-    DATABASE_URL: str = "sqlite:///./data/dhl_tracking.db"
-    
-    # File Processing Settings
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB and can be adjusted if one requeres
-    ALLOWED_EXTENSIONS: list = [".csv", ".xlsx", ".xls"]
+    DHL_BATCH_SIZE: int = 10
+
+    # Database
+    DATABASE_URL: str = "sqlite:///./tracking.db"
+
+    # File upload & export
     UPLOAD_DIR: str = "./data/uploads"
     EXPORT_DIR: str = "./exports"
-    ##
-    # Rate Limiting
-    RATE_LIMIT_PER_MINUTE: int = 60
-    
-    # Logging
-    LOG_LEVEL: str = "INFO"
-    LOG_FILE: str = "./data/app.log"
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024
+    ALLOWED_EXTENSIONS: List[str] = [".csv", ".xlsx", ".xls"]
 
-    # Optional: Team leader emails (you can hardcode or move to DB later)
-    TEAM_LEADER_EMAILS: list[str] = ["leader1@yourcompany.com", "leader2@yourcompany.com"]
-    
-    class Config:
-        env_file = ".env" #or env_file = ".env.example"
-        case_sensitive = True
-        extra = "ignore"
+    # Email
+    SMTP_SERVER: str
+    SMTP_PORT: int = 587
+    FROM_EMAIL: str
+    EMAIL_PASSWORD: str
+
+    # Team leader emails (comma-separated string in .env)
+    TEAM_LEADER_EMAILS: str = ""
+
+    @field_validator("TEAM_LEADER_EMAILS")
+    @classmethod
+    def split_emails(cls, v: str) -> List[str]:
+        if not v:
+            return []
+        return [email.strip() for email in v.split(",") if email.strip()]
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
-    """
-    Returns cached settings instance
-    Singleton pattern for configuration
-    """
     return Settings()
 
 
-# Export settings instance
 settings = get_settings()

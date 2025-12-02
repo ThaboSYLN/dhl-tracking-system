@@ -95,6 +95,18 @@ class TrackingRepository:
             return True
         return False
 
+    async def mark_bin_closure_email_sent(self, tracking_number: str) -> bool:
+        record = self.get_by_tracking_number(tracking_number)
+        if record and not getattr(record, "bin_closure_email_sent", False):
+            record.bin_closure_email_sent = True
+            record.bin_closure_email_sent_at = datetime.utcnow()
+            record.updated_at = datetime.utcnow()
+            self.db.commit()
+            return True
+        return False
+
+    async def get_by_tracking_number_async(self, tracking_number: str) -> Optional[TrackingRecord]:
+        return self.get_by_tracking_number(tracking_number)
 
 class APIUsageRepository:
     """
@@ -178,4 +190,14 @@ class ExportRepository:
             ExportHistory.export_type == export_type
         ).order_by(ExportHistory.created_at.desc()).all()
 
+# GLOBAL REPOSITORY INSTANCE — CORRECT & FINAL VERSION
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from app.utils.dependencies import get_db
+
+def get_tracking_repo(db: Session = Depends(get_db)):
+    return TrackingRepository(db)
+
+# This is what dhl_services.py imports
+tracking_repo = get_tracking_repo()
 #as async and see 

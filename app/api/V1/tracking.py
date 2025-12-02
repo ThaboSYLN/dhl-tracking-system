@@ -114,7 +114,7 @@ async def track_single_shipment(
         if result.get('is_successful', False):  # Assuming this means waybill exists and is with DHL
             confirmed_waybills = [tracking_number]
             team_leaders = ["asithandileludonga78@gmail.com", "2366821@students.wits.ac.za"]  # Hardcode or load from config/db
-            send_bin_closure_email(team_leaders, confirmed_waybills)  # For testing: use ['yourpersonal@gmail.com']
+            send_bin_closure_email(team_leaders)  # For testing: use ['yourpersonal@gmail.com']
 
         # Save to database
         record = tracking_repo.upsert(result)
@@ -179,7 +179,7 @@ async def track_bulk_shipments(
         confirmed_waybills = [res['tracking_number'] for res in results["results"] if res.get('is_successful', False)]
         if confirmed_waybills:
             team_leaders = ["asithandileludonga78@gmail.com", "2366821@students.wits.ac.za"]  # Hardcode or load from config/db
-            send_bin_closure_email(team_leaders, confirmed_waybills)  # For testing: personal emails
+            send_bin_closure_email(team_leaders)  # For testing: personal emails
 
         return BulkTrackingResponse(
             total_requested=results["total_requested"],
@@ -246,7 +246,7 @@ async def upload_and_track(
         confirmed_waybills = [res['tracking_number'] for res in results["results"] if res.get('is_successful', False)]
         if confirmed_waybills:
             team_leaders = ["asithandileludonga78@gmail.com", "2366821@students.wits.ac.za"]  # Hardcode or load from config/db
-            send_bin_closure_email(team_leaders, confirmed_waybills)  # For testing: personal emails
+            send_bin_closure_email(team_leaders)  # For testing: personal emails
         
         return BulkTrackingResponse(
             total_requested=results["total_requested"],

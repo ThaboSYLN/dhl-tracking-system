@@ -11,6 +11,20 @@ import logging
 
 from app.utils.config import settings
 
+# ADD THESE IMPORTS
+#from app.repositories.tracking_repository import tracking_repo
+
+def should_close_bin(events: List[Dict]) -> bool:
+    """Return True if DHL has picked up the parcel → bin can be closed"""
+    pickup_codes = {"PU", "OK", "DF", "SC", "PC"}
+    for event in events:
+        code = event.get("eventCode", "")
+        desc = str(event.get("description", "")).lower()
+        if code in pickup_codes or any(p in desc for p in ["picked up", "collected", "received by dhl", "handed over"]):
+            logger.info(f"Bin closure triggered: {code} - {desc}")
+            return True
+    return False
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,14 +66,27 @@ class DHLAPIService:
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                # DHL API endpoint for single tracking
                 url = f"{self.api_url}?trackingNumber={tracking_number}"
-                
                 response = await client.get(url, headers=self.headers)
                 
                 if response.status_code == 200:
                     data = response.json()
-                    return self._parse_tracking_response(data, tracking_number)
+                    parsed = self._parse_tracking_response(data, tracking_number)
+                    
+                    if parsed["is_successful"]:
+                        events = parsed["tracking_details"]["events"]
+                        
+                        # AUTO SEND BIN CLOSURE EMAIL WHEN DHL PICKS UP
+                        if should_close_bin(events):
+                            from app.utils.email_sender import send_bin_closure_email
+                            record = await tracking_repo.get_by_tracking_number_async(tracking_number)
+                            if record and not record.bin_closure_email_sent:
+                                logger.info(f"SENDING BIN CLOSURE EMAIL for {tracking_number}")
+                                send_bin_closure_email([tracking_number])
+                                await tracking_repo.mark_bin_closure_email_sent(tracking_number)
+                    
+                    return parsed
+                
                 elif response.status_code == 404:
                     return {
                         "tracking_number": tracking_number,

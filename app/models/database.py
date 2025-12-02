@@ -38,6 +38,10 @@ class TrackingRecord(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_checked = Column(DateTime(timezone=True), nullable=True)
     
+    #Email generation
+    bin_closure_email_sent = Column(Boolean, default=False, server_default="false")
+    bin_closure_email_sent_at = Column(DateTime, nullable=True)
+    
     def __repr__(self):
         return f"<TrackingRecord(tracking_number={self.tracking_number}, status={self.status})>"
 
