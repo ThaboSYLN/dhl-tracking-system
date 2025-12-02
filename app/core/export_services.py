@@ -1,6 +1,11 @@
 """
 Export services for generating PDF and DOCX reports
 Handles document generation with tracking information
+
+CHANGES MADE:
+1. generate_pdf: Added binID column to PDF table (Lines 67-87, 91-102)
+2. generate_docx: Added binID column to DOCX table (Lines 155-185, 189-210)
+3. Both detailed and simple views now include binID
 """
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
@@ -23,9 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class ExportService:
-    """
-    Service for exporting tracking data to PDF and DOCX
-    """
+    """Service for exporting tracking data to PDF and DOCX"""
     
     def __init__(self):
         self.export_dir = settings.EXPORT_DIR
@@ -63,6 +66,8 @@ class ExportService:
         """
         Generate PDF report
         
+        UPDATED: Now includes binID column in table
+        
         Args:
             tracking_records: List of TrackingRecord objects
             include_details: Include detailed information
@@ -83,7 +88,7 @@ class ExportService:
                 fontSize=24,
                 textColor=colors.HexColor('#1a1a1a'),
                 spaceAfter=30,
-                alignment=1  # Center
+                alignment=1
             )
             title = Paragraph("DHL Tracking Report", title_style)
             elements.append(title)
@@ -96,10 +101,11 @@ class ExportService:
             elements.append(info)
             elements.append(Spacer(1, 0.3*inch))
             
-            # Table data - REMOVED Status Description, ADDED Last Event Date
+            # Table data with binID column
             if include_details:
                 data = [[
-                    'Tracking #', 
+                    'Tracking #',
+                    'Bin ID',  # NEW COLUMN
                     'Status Code', 
                     'Origin', 
                     'Destination', 
@@ -110,6 +116,7 @@ class ExportService:
                     last_event_date = self._get_last_event_date(record)
                     data.append([
                         record.tracking_number,
+                        record.bin_id or 'N/A',  # NEW: binID column
                         record.status_code or 'N/A',
                         record.origin or 'N/A',
                         record.destination or 'N/A',
@@ -117,7 +124,8 @@ class ExportService:
                     ])
             else:
                 data = [[
-                    'Tracking #', 
+                    'Tracking #',
+                    'Bin ID',  # NEW COLUMN
                     'Status Code', 
                     'Last Event Date'
                 ]]
@@ -126,6 +134,7 @@ class ExportService:
                     last_event_date = self._get_last_event_date(record)
                     data.append([
                         record.tracking_number,
+                        record.bin_id or 'N/A',  # NEW: binID column
                         record.status_code or 'N/A',
                         last_event_date
                     ])
@@ -162,6 +171,8 @@ class ExportService:
         """
         Generate DOCX report
         
+        UPDATED: Now includes binID column in table
+        
         Args:
             tracking_records: List of TrackingRecord objects
             include_details: Include detailed information
@@ -181,17 +192,18 @@ class ExportService:
             info_para = doc.add_paragraph()
             info_para.add_run(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n").bold = True
             info_para.add_run(f"Total Records: {len(tracking_records)}").bold = True
-            doc.add_paragraph()  # Spacer
+            doc.add_paragraph()
             
-            # Create table - REMOVED Status Description, ADDED Last Event Date
+            # Create table with binID column
             if include_details:
-                table = doc.add_table(rows=1, cols=5)
+                table = doc.add_table(rows=1, cols=6)  # UPDATED: 6 columns now
                 table.style = 'Light Grid Accent 1'
                 
                 # Header row
                 header_cells = table.rows[0].cells
                 headers = [
-                    'Tracking #', 
+                    'Tracking #',
+                    'Bin ID',  # NEW COLUMN
                     'Status Code', 
                     'Origin', 
                     'Destination', 
@@ -209,18 +221,20 @@ class ExportService:
                     last_event_date = self._get_last_event_date(record)
                     row_cells = table.add_row().cells
                     row_cells[0].text = record.tracking_number
-                    row_cells[1].text = record.status_code or 'N/A'
-                    row_cells[2].text = record.origin or 'N/A'
-                    row_cells[3].text = record.destination or 'N/A'
-                    row_cells[4].text = last_event_date
+                    row_cells[1].text = record.bin_id or 'N/A'  # NEW: binID column
+                    row_cells[2].text = record.status_code or 'N/A'
+                    row_cells[3].text = record.origin or 'N/A'
+                    row_cells[4].text = record.destination or 'N/A'
+                    row_cells[5].text = last_event_date
             else:
-                table = doc.add_table(rows=1, cols=3)
+                table = doc.add_table(rows=1, cols=4)  # UPDATED: 4 columns now
                 table.style = 'Light Grid Accent 1'
                 
                 # Header row
                 header_cells = table.rows[0].cells
                 headers = [
-                    'Tracking #', 
+                    'Tracking #',
+                    'Bin ID',  # NEW COLUMN
                     'Status Code', 
                     'Last Event Date'
                 ]
@@ -236,8 +250,9 @@ class ExportService:
                     last_event_date = self._get_last_event_date(record)
                     row_cells = table.add_row().cells
                     row_cells[0].text = record.tracking_number
-                    row_cells[1].text = record.status_code or 'N/A'
-                    row_cells[2].text = last_event_date
+                    row_cells[1].text = record.bin_id or 'N/A'  # NEW: binID column
+                    row_cells[2].text = record.status_code or 'N/A'
+                    row_cells[3].text = last_event_date
             
             # Save document
             doc.save(filename)
@@ -249,12 +264,7 @@ class ExportService:
             raise
     
     def cleanup_old_exports(self, days: int = 7):
-        """
-        Clean up export files older than specified days
-        
-        Args:
-            days: Number of days to keep files
-        """
+        """Clean up export files older than specified days"""
         try:
             cutoff_time = datetime.now().timestamp() - (days * 24 * 60 * 60)
             

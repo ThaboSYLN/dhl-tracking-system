@@ -1,6 +1,10 @@
 """
 Database models using SQLAlchemy ORM
 Follows declarative base pattern
+
+CHANGES MADE:
+- Added bin_id column to TrackingRecord model (Line 22)
+- bin_id is nullable and indexed for better query performance
 """
 from sqlalchemy import Column, Integer, String, DateTime, JSON, Boolean
 from sqlalchemy.ext.declarative import declarative_base
@@ -18,6 +22,9 @@ class TrackingRecord(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     tracking_number = Column(String(50), unique=True, index=True, nullable=False)
+    
+    # NEW: binID column added to associate with tracking number
+    bin_id = Column(String(100), nullable=True, index=True)
     
     # Tracking Information
     status_code = Column(String(20), nullable=True)
@@ -39,7 +46,7 @@ class TrackingRecord(Base):
     last_checked = Column(DateTime(timezone=True), nullable=True)
     
     def __repr__(self):
-        return f"<TrackingRecord(tracking_number={self.tracking_number}, status={self.status})>"
+        return f"<TrackingRecord(tracking_number={self.tracking_number}, bin_id={self.bin_id}, status={self.status})>"
 
 
 class APIUsage(Base):
@@ -77,3 +84,4 @@ class ExportHistory(Base):
     
     def __repr__(self):
         return f"<ExportHistory(type={self.export_type}, records={self.record_count})>"
+

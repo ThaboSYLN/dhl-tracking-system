@@ -1,9 +1,15 @@
 """
 Pydantic schemas for request/response validation
 Ensures type safety and data validation
+
+CHANGES MADE:
+1. TrackingResponse: Added bin_id field (Line 44)
+2. PlainTextBulkRequest: Updated validator to parse "waybill,binID" format (Lines 113-165)
+3. PlainTextExportRequest: Updated validator to parse "waybill,binID" format (Lines 292-344)
+4. New helper class: WaybillBinIDPair for internal use (Lines 34-39)
 """
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 from enum import Enum
 
@@ -17,20 +23,28 @@ class ExportFormat(str, Enum):
 class TrackingNumberInput(BaseModel):
     """Single tracking number input"""
     tracking_number: str = Field(..., min_length=5, max_length=50)
+    bin_id: Optional[str] = Field(None, max_length=100)
     
     @validator('tracking_number')
     def validate_tracking_number(cls, v):
         """Clean and validate tracking number"""
-        # Remove whitespace
         v = v.strip().upper()
         if not v:
             raise ValueError("Tracking number cannot be empty")
         return v
     
+    @validator('bin_id')
+    def validate_bin_id(cls, v):
+        """Clean binID"""
+        if v:
+            return v.strip()
+        return v
+    
     class Config:
         json_schema_extra = {
             "example": {
-                "tracking_number": "1234567890"
+                "tracking_number": "1234567890",
+                "bin_id": "BIN001"
             }
         }
 
@@ -38,6 +52,7 @@ class TrackingNumberInput(BaseModel):
 class TrackingResponse(BaseModel):
     """Response for single tracking query"""
     tracking_number: str
+    bin_id: Optional[str] = None  # NEW: binID field added
     status_code: Optional[str] = None
     status: Optional[str] = None
     origin: Optional[str] = None
@@ -52,6 +67,7 @@ class TrackingResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "tracking_number": "1234567890",
+                "bin_id": "BIN001",
                 "status_code": "delivered",
                 "status": "Delivered",
                 "origin": "New York, USA",
@@ -93,50 +109,72 @@ class PlainTextBulkRequest(BaseModel):
     """
     Request for bulk tracking with plain text input
     Each tracking number on a new line
+    
+    UPDATED: Now supports format: waybill,binID
+    Examples:
+    - Simple: "1234567890" (binID will be None)
+    - With binID: "1234567890,BIN001"
     """
     tracking_numbers_text: str = Field(
         ..., 
-        description="Tracking numbers separated by newlines",
+        description="Tracking numbers separated by newlines. Format: waybill or waybill,binID",
         min_length=1
     )
     
     @validator('tracking_numbers_text')
     def parse_tracking_numbers(cls, v):
-        """Parse and validate tracking numbers from text"""
+        """
+        Parse and validate tracking numbers from text
+        UPDATED: Now supports 'waybill,binID' format
+        Returns: List of tuples [(waybill, binID), ...]
+        """
         if not v or not v.strip():
             raise ValueError("No tracking numbers provided")
         
-        # Split by newlines and clean
         lines = v.strip().split('\n')
-        tracking_numbers = []
+        tracking_data = []  # List of tuples: (waybill, binID)
         
-        for line in lines:
-            # Clean each line
-            cleaned = line.strip().upper()
-            # Skip empty lines
-            if cleaned:
-                tracking_numbers.append(cleaned)
+        for line_num, line in enumerate(lines, 1):
+            cleaned = line.strip()
+            if not cleaned:
+                continue
+            
+            # Check if line contains comma (waybill,binID format)
+            if ',' in cleaned:
+                parts = [p.strip() for p in cleaned.split(',', 1)]  # Split on first comma only
+                waybill = parts[0].upper()
+                bin_id = parts[1] if len(parts) > 1 and parts[1] else None
+                
+                if not waybill:
+                    raise ValueError(f"Line {line_num}: Waybill cannot be empty")
+                
+                tracking_data.append((waybill, bin_id))
+            else:
+                # Just waybill, no binID
+                waybill = cleaned.upper()
+                if waybill:
+                    tracking_data.append((waybill, None))
         
-        if not tracking_numbers:
+        if not tracking_data:
             raise ValueError("No valid tracking numbers found")
         
-        if len(tracking_numbers) > 1000:
+        if len(tracking_data) > 1000:
             raise ValueError("Maximum 1000 tracking numbers allowed")
         
-        # Remove duplicates while preserving order
+        # Remove duplicates while preserving order (based on waybill)
         seen = set()
         unique = []
-        for num in tracking_numbers:
-            if num not in seen:
-                seen.add(num)
-                unique.append(num)
+        for waybill, bin_id in tracking_data:
+            if waybill not in seen:
+                seen.add(waybill)
+                unique.append((waybill, bin_id))
         
         return unique
     
     class Config:
         json_schema_extra = {
             "example": {
-                "tracking_numbers_text": "1234567890\n0987654321\n1122334455"
+                "tracking_numbers_text": "1234567890,BIN001\n0987654321,BIN002\n1122334455"
             }
         }
 
@@ -183,46 +221,66 @@ class PlainTextExportRequest(BaseModel):
     """
     Request for exporting tracking data with plain text input
     Each tracking number on a new line
+    
+    UPDATED: Now supports format: waybill,binID
     """
     tracking_numbers_text: str = Field(
         ..., 
-        description="Tracking numbers separated by newlines"
+        description="Tracking numbers separated by newlines. Format: waybill or waybill,binID"
     )
     format: ExportFormat = ExportFormat.PDF
     include_details: bool = True
     
     @validator('tracking_numbers_text')
     def parse_tracking_numbers(cls, v):
-        """Parse and validate tracking numbers from text"""
+        """
+        Parse and validate tracking numbers from text
+        UPDATED: Now supports 'waybill,binID' format
+        Returns: List of tuples [(waybill, binID), ...]
+        """
         if not v or not v.strip():
             raise ValueError("No tracking numbers provided")
         
-        # Split by newlines and clean
         lines = v.strip().split('\n')
-        tracking_numbers = []
+        tracking_data = []
         
-        for line in lines:
-            cleaned = line.strip().upper()
-            if cleaned:
-                tracking_numbers.append(cleaned)
+        for line_num, line in enumerate(lines, 1):
+            cleaned = line.strip()
+            if not cleaned:
+                continue
+            
+            # Check if line contains comma
+            if ',' in cleaned:
+                parts = [p.strip() for p in cleaned.split(',', 1)]
+                waybill = parts[0].upper()
+                bin_id = parts[1] if len(parts) > 1 and parts[1] else None
+                
+                if not waybill:
+                    raise ValueError(f"Line {line_num}: Waybill cannot be empty")
+                
+                tracking_data.append((waybill, bin_id))
+            else:
+                waybill = cleaned.upper()
+                if waybill:
+                    tracking_data.append((waybill, None))
         
-        if not tracking_numbers:
+        if not tracking_data:
             raise ValueError("No valid tracking numbers found")
         
-        # Remove duplicates
+        # Remove duplicates based on waybill
         seen = set()
         unique = []
-        for num in tracking_numbers:
-            if num not in seen:
-                seen.add(num)
-                unique.append(num)
+        for waybill, bin_id in tracking_data:
+            if waybill not in seen:
+                seen.add(waybill)
+                unique.append((waybill, bin_id))
         
         return unique
     
     class Config:
         json_schema_extra = {
             "example": {
-                "tracking_numbers_text": "1234567890\n0987654321",
+                "tracking_numbers_text": "1234567890,BIN001\n0987654321,BIN002",
                 "format": "pdf",
                 "include_details": True
             }

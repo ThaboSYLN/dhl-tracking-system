@@ -1,14 +1,18 @@
 """
 FastAPI endpoints for DHL tracking system
 Implements REST API following best practices
+
+CHANGES MADE:
+1. track_bulk_shipments: Now handles List[Tuple[waybill, binID]] from validator (Line 108)
+2. upload_and_track: Now handles tuples from file_processor (Line 159)
+3. export_tracking_data: Now handles tuples from validator (Line 204)
+4. All endpoints maintain binID association throughout
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks,Query,Path
-#from fastapi.params import Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 import logging
-#from typing import List
 from pydantic import BaseModel
 
 
@@ -50,10 +54,7 @@ class Config:
 
 logger = logging.getLogger(__name__)
 
-# Create router
 router = APIRouter(prefix="/tracking", tags=["Tracking"])
-
-# Initialize batch processor
 batch_processor = BatchProcessor(dhl_service)
 
 
@@ -62,24 +63,20 @@ batch_processor = BatchProcessor(dhl_service)
 @router.get("/single/{tracking_number}", response_model=TrackingResponse, summary="Track Single Shipment")
 async def track_single_shipment(
     tracking_number: str,
+    bin_id: str = Query(None, description="Optional binID to associate with tracking"),
     db: Session = Depends(get_db)
 ):
     """
     Track a single DHL shipment by tracking number
     
-    **Usage:** Simply add the tracking number to the URL
+    UPDATED: Now accepts optional bin_id query parameter
     
-    **Example:** `/api/v1/tracking/single/1234567890`
+    **Usage:** `/api/v1/tracking/single/1234567890?bin_id=BIN001`
     
     - **tracking_number**: DHL tracking/waybill number (in URL path)
-    
-    Returns detailed tracking information including:
-    - Current status
-    - Origin and destination
-    - Tracking timeline
+    - **bin_id**: Optional binID to associate (query parameter)
     """
     try:
-        # Clean and validate tracking number
         tracking_number = tracking_number.strip().upper()
         
         if not tracking_number or len(tracking_number) < 5:
@@ -91,7 +88,6 @@ async def track_single_shipment(
         tracking_repo = TrackingRepository(db)
         api_usage_repo = APIUsageRepository(db)
         
-        # Check rate limits
         if not api_usage_repo.can_make_request(settings.DHL_DAILY_LIMIT):
             raise HTTPException(
                 status_code=429,
@@ -103,12 +99,16 @@ async def track_single_shipment(
         if existing and existing.last_checked:
             from datetime import datetime
             age_seconds = (datetime.utcnow() - existing.last_checked).seconds
-            if age_seconds < 3600:  # Less than 1 hour old
+            if age_seconds < 3600:
+                # Update binID if provided and different
+                if bin_id and bin_id != existing.bin_id:
+                    tracking_repo.update(tracking_number, {'bin_id': bin_id})
+                    existing.bin_id = bin_id
                 logger.info(f"Returning cached data for {tracking_number}")
                 return existing
         
-        # Fetch from DHL API
-        result = await dhl_service.track_single(tracking_number)
+        # Fetch from DHL API with binID
+        result = await dhl_service.track_single(tracking_number, bin_id)
         
         # Save to database
         record = tracking_repo.upsert(result)
@@ -131,34 +131,35 @@ async def track_single_shipment(
 
 @router.post("/bulk", response_model=BulkTrackingResponse, summary="Track Multiple Shipments")
 async def track_bulk_shipments(
-    request: PlainTextBulkRequest,  # Changed from BulkTrackingRequest
+    request: PlainTextBulkRequest,
     db: Session = Depends(get_db)
 ):
     """
     Track multiple DHL shipments in a single request
     
+    UPDATED: Now supports binID in format: waybill,binID
+    
     **How to use:**
     - Enter tracking numbers in plain text
     - Put each tracking number on a new line
+    - Optional: Add binID after comma: `waybill,binID`
     - System automatically removes duplicates and empty lines
     
     **Example input:**
     ```
-    1234567890
-    0987654321
+    1234567890,BIN001
+    0987654321,BIN002
     1122334455
     ```
     
     - Maximum 1000 tracking numbers per request
-    - Intelligently batches requests to optimize API usage
-    - Uses caching to minimize API calls for recently checked shipments
     """
     try:
         tracking_repo = TrackingRepository(db)
         api_usage_repo = APIUsageRepository(db)
         
-        # Get the parsed tracking numbers from the validator
-        tracking_numbers = request.tracking_numbers_text
+        # Get the parsed tracking data (now List[Tuple[waybill, binID]])
+        tracking_data = request.tracking_numbers_text
         
         # Check rate limits
         remaining = api_usage_repo.get_remaining_requests(settings.DHL_DAILY_LIMIT)
@@ -168,9 +169,9 @@ async def track_bulk_shipments(
                 detail="Daily API limit reached. Please try again tomorrow."
             )
         
-        # Process batch
+        # Process batch with binID support
         results = await batch_processor.process_batch(
-            tracking_numbers,
+            tracking_data,
             tracking_repo,
             api_usage_repo
         )
@@ -194,32 +195,36 @@ async def track_bulk_shipments(
 
 @router.post("/upload", response_model=BulkTrackingResponse, summary="Upload and Track from File")
 async def upload_and_track(
-    file: UploadFile = File(..., description="CSV or Excel file with tracking numbers"),
+    file: UploadFile = File(..., description="CSV or Excel file with tracking numbers and binIDs"),
     db: Session = Depends(get_db)
 ):
     """
-    Upload a CSV or Excel file containing tracking numbers and process them
+    Upload a CSV or Excel file containing tracking numbers and binIDs
     
-    - **file**: CSV or Excel file (.csv, .xlsx, .xls)
-    - File should contain a column named 'tracking_number', 'waybill', or similar
-    - If no matching column is found, the first column will be used
+    UPDATED: Now supports two-column format (waybill, binID)
+    
+    **File Format:**
+    - Column A: waybill/tracking_number (required)
+    - Column B: binID/bin_id (optional)
+    
+    **Supported file types:** .csv, .xlsx, .xls
     
     The system will:
-    1. Extract tracking numbers from the file
+    1. Extract tracking numbers and binIDs from the file
     2. Remove duplicates
     3. Batch process them intelligently
-    4. Return detailed results
+    4. Maintain binID association throughout
+    5. Return detailed results
     """
     try:
-        # Process file to extract tracking numbers
-        tracking_numbers = await file_processor.process_file(file)
+        # Process file to extract tracking data (now returns List[Tuple])
+        tracking_data = await file_processor.process_file(file)
         
-        if not tracking_numbers:
-            raise HTTPException(status_code=400, detail="No valid tracking numbers found in file")
+        if not tracking_data:
+            raise HTTPException(status_code=400, detail="No valid tracking data found in file")
         
-        logger.info(f"Extracted {len(tracking_numbers)} tracking numbers from {file.filename}")
+        logger.info(f"Extracted {len(tracking_data)} tracking records from {file.filename}")
         
-        # Process as bulk request
         tracking_repo = TrackingRepository(db)
         api_usage_repo = APIUsageRepository(db)
         
@@ -231,9 +236,9 @@ async def upload_and_track(
                 detail="Daily API limit reached. Please try again tomorrow."
             )
         
-        # Process batch
+        # Process batch with binID support
         results = await batch_processor.process_large_batch(
-            tracking_numbers,
+            tracking_data,
             tracking_repo,
             api_usage_repo
         )
@@ -257,33 +262,39 @@ async def upload_and_track(
 
 @router.post("/export", response_model=ExportResponse, summary="Export Tracking Data")
 async def export_tracking_data(
-    request: PlainTextExportRequest,  # Changed from ExportRequest
+    request: PlainTextExportRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
     Export tracking data to PDF or DOCX format
     
+    UPDATED: Now supports binID in format: waybill,binID
+    
     **How to use:**
     - Enter tracking numbers in plain text (one per line)
+    - Optional: Add binID after comma: `waybill,binID`
     - Select format (pdf or docx)
     - Choose whether to include detailed information
     
     **Example input:**
     ```
-    1234567890
-    0987654321
+    1234567890,BIN001
+    0987654321,BIN002
     1122334455
     ```
     
-    Returns a downloadable file with the tracking information formatted in a table.
+    Returns a downloadable file with the tracking information including binID column.
     """
     try:
         tracking_repo = TrackingRepository(db)
         export_repo = ExportRepository(db)
         
-        # Get parsed tracking numbers from validator
-        tracking_numbers = request.tracking_numbers_text
+        # Get parsed tracking data (now List[Tuple[waybill, binID]])
+        tracking_data = request.tracking_numbers_text
+        
+        # Extract just the waybills for querying
+        tracking_numbers = [waybill for waybill, _ in tracking_data]
         
         # Get tracking records
         records = tracking_repo.get_multiple(tracking_numbers)
@@ -291,10 +302,19 @@ async def export_tracking_data(
         if not records:
             raise HTTPException(status_code=404, detail="No tracking records found")
         
-        # Generate export file
+        # Update binIDs if they were provided but not in database
+        records_dict = {r.tracking_number: r for r in records}
+        for waybill, bin_id in tracking_data:
+            if bin_id and waybill in records_dict:
+                record = records_dict[waybill]
+                if not record.bin_id or record.bin_id != bin_id:
+                    tracking_repo.update(waybill, {'bin_id': bin_id})
+                    record.bin_id = bin_id
+        
+        # Generate export file (now includes binID column)
         if request.format == "pdf":
             file_path = export_service.generate_pdf(records, request.include_details)
-        else:  # docx
+        else:
             file_path = export_service.generate_docx(records, request.include_details)
         
         # Save export history
@@ -343,13 +363,10 @@ async def list_recent_exports(
     - Displays filename, creation time, file size, and record count
     - Provides direct download URLs for each file
     - Sorted by most recent first
-    
-    **Perfect for:** Finding that file you just exported without remembering the exact name!
     """
     try:
         export_repo = ExportRepository(db)
         
-        # Get recent exports from database
         recent_exports = export_repo.get_recent(limit)
         
         if not recent_exports:
@@ -359,21 +376,17 @@ async def list_recent_exports(
                 "message": "No export files found"
             }
         
-        # Build file info list
         export_files = []
         for export in recent_exports:
             import os
             file_path = export.file_path
             
-            # Check if file still exists
             if not os.path.exists(file_path):
                 continue
             
-            # Get file info
             file_stats = os.stat(file_path)
             file_size_bytes = file_stats.st_size
             
-            # Format file size
             if file_size_bytes < 1024:
                 file_size = f"{file_size_bytes} B"
             elif file_size_bytes < 1024 * 1024:
@@ -404,7 +417,6 @@ async def list_recent_exports(
         raise HTTPException(status_code=500, detail=f"Failed to list exports: {str(e)}")
 
 
-# KEEP THE EXISTING DOWNLOAD ENDPOINT (improved with better error messages)
 @router.get("/download/{filename}", summary="Download Export File")
 async def download_export_file(filename: str):
     """
@@ -416,13 +428,10 @@ async def download_export_file(filename: str):
     3. Use this endpoint with that filename
     
     **Or:** Just use the `download_url` provided in the recent exports list!
-    
-    - **filename**: Name of the file to download
     """
     import os
     file_path = os.path.join(settings.EXPORT_DIR, filename)
     
-    # Security check: prevent directory traversal
     if '..' in filename or '/' in filename or '\\' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
     
@@ -432,7 +441,6 @@ async def download_export_file(filename: str):
             detail=f"File not found. Use /api/v1/tracking/exports/recent to see available files."
         )
     
-    # Determine media type
     if filename.endswith('.pdf'):
         media_type = 'application/pdf'
     elif filename.endswith('.docx'):
@@ -447,7 +455,6 @@ async def download_export_file(filename: str):
     )
 
 
-# BONUS ENDPOINT: Download Latest Export
 @router.get("/download/latest/{export_type}", summary="Download Most Recent Export")
 async def download_latest_export(
     export_type: str = Path(..., regex="^(pdf|docx)$", description="File type to download"),
@@ -461,13 +468,10 @@ async def download_latest_export(
     **Examples:**
     - `/api/v1/tracking/download/latest/pdf` - Gets your latest PDF
     - `/api/v1/tracking/download/latest/docx` - Gets your latest DOCX
-    
-    - **export_type**: 'pdf' or 'docx'
     """
     try:
         export_repo = ExportRepository(db)
         
-        # Get most recent export of this type
         exports = export_repo.get_by_type(export_type)
         
         if not exports:
@@ -476,7 +480,6 @@ async def download_latest_export(
                 detail=f"No {export_type.upper()} exports found"
             )
         
-        # Get the most recent one
         latest_export = exports[0]
         
         import os
@@ -490,7 +493,6 @@ async def download_latest_export(
         
         filename = os.path.basename(file_path)
         
-        # Determine media type
         if export_type == 'pdf':
             media_type = 'application/pdf'
         else:
@@ -509,43 +511,13 @@ async def download_latest_export(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-@router.get("/download/{filename}", summary="Download Export File")
-async def download_export_file(filename: str):
-    """
-    Download an exported tracking report
-    
-    - **filename**: Name of the file to download
-    """
-    import os
-    file_path = os.path.join(settings.EXPORT_DIR, filename)
-    
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Determine media type
-    if filename.endswith('.pdf'):
-        media_type = 'application/pdf'
-    elif filename.endswith('.docx'):
-        media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    else:
-        media_type = 'application/octet-stream'
-    
-    return FileResponse(
-        path=file_path,
-        media_type=media_type,
-        filename=filename
-    )
-
-
 @router.get("/history/{tracking_number}", response_model=TrackingResponse, summary="Get Tracking History")
 async def get_tracking_history(tracking_number: str, db: Session = Depends(get_db)):
     """
     Get stored tracking history for a specific tracking number
     
-    - **tracking_number**: DHL tracking/waybill number
-    
     Returns cached tracking information without making a new API call.
+    Includes binID if available.
     """
     tracking_repo = TrackingRepository(db)
     record = tracking_repo.get_by_tracking_number(tracking_number.upper())
@@ -579,4 +551,5 @@ async def get_api_usage(db: Session = Depends(get_db)):
         daily_limit=settings.DHL_DAILY_LIMIT,
         percentage_used=round(percentage, 2)
     )
+
 

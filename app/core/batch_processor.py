@@ -2,9 +2,15 @@
 Advanced batch processor with intelligent multi-level retry system
 Processes in batches of 20 with 7-second delays
 Automatically retries failed requests multiple times until success or max retries
+
+CHANGES MADE:
+1. _retry_failed_waybills: Now handles List[Tuple[waybill, binID]] (Line 54)
+2. _process_with_multi_retry: Now accepts and processes tracking_data tuples (Line 134)
+3. process_batch: Now accepts List[Tuple[waybill, binID]] (Line 269)
+4. process_large_batch: Now accepts List[Tuple[waybill, binID]] (Line 446)
 """
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import logging
 import uuid
@@ -20,19 +26,19 @@ class BatchProcessor:
     """
     Intelligent batch processor with multi-level retry system
     Features:
-    - Processes 20 waybills per batch---will change to maybe 10 or 15 if the test fail
-    - 7-second delays between batches----will change to 10 if the test fail
-    - Automatic retry up to MAX_RETRIES times---till all the waybill are processed with clear result not the HTTP error429--This is a brut_force approach {[:|]
-    - Background retry processing (transparent to user)
+    - Processes 5 waybills per batch (configurable)
+    - 7-second delays between batches
+    - Automatic retry up to MAX_RETRIES times
+    - Maintains binID association throughout processing
     """
     
     def __init__(self, dhl_service: DHLAPIService):
         self.dhl_service = dhl_service
-        self.batch_size = 5  # Process 20 waybills per batch
-        self.batch_delay = 7  # 7 seconds between batches
+        self.batch_size = 5
+        self.batch_delay = 7
         self.daily_limit = settings.DHL_DAILY_LIMIT
-        self.max_retries = 5 # Maximum number of retry attempts
-        self.retry_delay = 10  # 10 seconds between retry attempts
+        self.max_retries = 5
+        self.retry_delay = 10
     
     def generate_batch_id(self) -> str:
         """Generate unique batch ID"""
@@ -42,7 +48,7 @@ class BatchProcessor:
     
     async def _retry_failed_waybills(
         self,
-        failed_waybills: List[str],
+        failed_waybills: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
         retry_attempt: int,
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository
@@ -50,9 +56,11 @@ class BatchProcessor:
         """
         Retry failed waybills with exponential backoff
         
+        UPDATED: Now handles List[Tuple[waybill, binID]]
+        
         Args:
-            failed_waybills: List of failed tracking numbers
-            retry_attempt: Current retry attempt number (1, 2, 3...)
+            failed_waybills: List of tuples [(waybill, binID), ...]
+            retry_attempt: Current retry attempt number
             tracking_repo: Tracking repository
             api_usage_repo: API usage repository
             
@@ -62,15 +70,13 @@ class BatchProcessor:
         if not failed_waybills:
             return {"successful": [], "failed": []}
         
-        # Calculate delay with exponential backoff
-        # Retry 1: 10s, Retry 2: 15s, Retry 3: 20s
         delay = self.retry_delay + (5 * (retry_attempt - 1))
         
         logger.info(f"Retry attempt {retry_attempt}/{self.max_retries} for {len(failed_waybills)} waybills")
-        logger.info(f" Waiting {delay} seconds before retry...")
+        logger.info(f"Waiting {delay} seconds before retry...")
         await asyncio.sleep(delay)
         
-        # Process failed waybills
+        # Process failed waybills with binID
         retry_results = await self.dhl_service.track_batch(failed_waybills, delay=0.5)
         
         successful = []
@@ -78,20 +84,20 @@ class BatchProcessor:
         
         for result in retry_results:
             tracking_number = result.get('tracking_number')
+            bin_id = result.get('bin_id')  # Preserve binID
             
             if result.get('is_successful'):
                 successful.append(result)
-                logger.info(f"Retry success: {tracking_number}")
+                logger.info(f"Retry success: {tracking_number} (binID: {bin_id})")
                 
-                # Update in database
                 try:
                     tracking_repo.upsert(result)
                     api_usage_repo.increment_usage(success=True)
                 except Exception as e:
                     logger.error(f"Error saving retry result: {str(e)}")
             else:
-                still_failed.append(tracking_number)
-                logger.warning(f"Retry failed: {tracking_number}")
+                still_failed.append((tracking_number, bin_id))  # Keep as tuple
+                logger.warning(f"Retry failed: {tracking_number} (binID: {bin_id})")
                 api_usage_repo.increment_usage(success=False)
         
         return {
@@ -101,7 +107,7 @@ class BatchProcessor:
     
     async def _process_with_multi_retry(
         self,
-        tracking_numbers: List[str],
+        tracking_data: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository,
         batch_id: str
@@ -110,8 +116,10 @@ class BatchProcessor:
         Process waybills with multi-level retry system
         Keeps retrying failed waybills until success or max retries reached
         
+        UPDATED: Now handles List[Tuple[waybill, binID]]
+        
         Args:
-            tracking_numbers: List of tracking numbers to process
+            tracking_data: List of tuples [(waybill, binID), ...]
             tracking_repo: Tracking repository
             api_usage_repo: API usage repository
             batch_id: Batch identifier
@@ -123,39 +131,36 @@ class BatchProcessor:
         failed_waybills = []
         total_api_calls = 0
         
-        # First pass: Process in batches of 20 with 7-second delays
-        logger.info(f"Processing {len(tracking_numbers)} waybills in batches of {self.batch_size}")
+        logger.info(f"Processing {len(tracking_data)} waybills in batches of {self.batch_size}")
         
-        for i in range(0, len(tracking_numbers), self.batch_size):
-            batch = tracking_numbers[i:i + self.batch_size]
+        # First pass: Process in batches
+        for i in range(0, len(tracking_data), self.batch_size):
+            batch = tracking_data[i:i + self.batch_size]
             batch_num = (i // self.batch_size) + 1
-            total_batches = (len(tracking_numbers) + self.batch_size - 1) // self.batch_size
+            total_batches = (len(tracking_data) + self.batch_size - 1) // self.batch_size
             
             logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} waybills)")
             
-            # Process this batch
             batch_results = await self.dhl_service.track_batch(batch, delay=0.2)
             total_api_calls += len(batch)
             
-            # Separate successful and failed
             for result in batch_results:
                 tracking_number = result.get('tracking_number')
+                bin_id = result.get('bin_id')
                 
                 if result.get('is_successful'):
                     result['batch_id'] = batch_id
                     all_successful_results.append(result)
                     
-                    # Save to database
                     try:
                         tracking_repo.upsert(result)
                         api_usage_repo.increment_usage(success=True)
                     except Exception as e:
                         logger.error(f"Error saving result: {str(e)}")
                 else:
-                    failed_waybills.append(tracking_number)
+                    failed_waybills.append((tracking_number, bin_id))  # Store as tuple
             
-            # Wait 7 seconds before next batch (except for last batch)
-            if i + self.batch_size < len(tracking_numbers):
+            if i + self.batch_size < len(tracking_data):
                 logger.info(f"Waiting {self.batch_delay} seconds before next batch...")
                 await asyncio.sleep(self.batch_delay)
         
@@ -175,7 +180,6 @@ class BatchProcessor:
                 logger.info(f"Retrying {len(current_failed)} failed waybills")
                 logger.info(f"{'='*80}")
                 
-                # Retry failed waybills
                 retry_result = await self._retry_failed_waybills(
                     current_failed,
                     retry_attempt,
@@ -183,38 +187,31 @@ class BatchProcessor:
                     api_usage_repo
                 )
                 
-                # Add successful retries to results
                 for success in retry_result["successful"]:
                     success['batch_id'] = batch_id
                     all_successful_results.append(success)
                 
-                # Update failed list
                 current_failed = retry_result["failed"]
                 total_api_calls += len(retry_result["successful"]) + len(current_failed)
                 
-                # Log retry summary
                 logger.info(f"\nRetry {retry_attempt} Summary:")
                 logger.info(f"Succeeded: {len(retry_result['successful'])}")
                 logger.info(f"Still failing: {len(current_failed)}")
                 
                 if not current_failed:
-                    logger.info(f"Yes:All waybills processed successfully!")
+                    logger.info(f"Yes: All waybills processed successfully!")
                     break
                 elif retry_attempt < self.max_retries:
                     logger.info(f"Will retry again (attempt {retry_attempt + 1}/{self.max_retries})")
             
-            # Final failed waybills after all retries
             if current_failed:
-                logger.warning(f"\n  {len(current_failed)} waybills still failed after {self.max_retries} retry attempts")
-                logger.warning(f"   Failed waybills: {', '.join(current_failed[:10])}")
-                if len(current_failed) > 10:
-                    logger.warning(f"   ... and {len(current_failed) - 10} more")
+                logger.warning(f"\n{len(current_failed)} waybills still failed after {self.max_retries} retry attempts")
                 
-                # Mark these as failed in database
-                for tn in current_failed:
+                for waybill, bin_id in current_failed:
                     try:
                         tracking_repo.upsert({
-                            'tracking_number': tn,
+                            'tracking_number': waybill,
+                            'bin_id': bin_id,  # Save binID even for failed records
                             'batch_id': batch_id,
                             'is_successful': False,
                             'error_message': f'Failed after {self.max_retries} retry attempts',
@@ -235,7 +232,7 @@ class BatchProcessor:
     
     async def process_batch(
         self,
-        tracking_numbers: List[str],
+        tracking_data: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository
     ) -> Dict[str, Any]:
@@ -243,8 +240,10 @@ class BatchProcessor:
         Main batch processing method with multi-level retry
         User sees seamless results - all retry logic happens in background
         
+        UPDATED: Now accepts List[Tuple[waybill, binID]]
+        
         Args:
-            tracking_numbers: List of tracking numbers to process
+            tracking_data: List of tuples [(waybill, binID), ...]
             tracking_repo: Repository for tracking records
             api_usage_repo: Repository for API usage tracking
             
@@ -256,7 +255,7 @@ class BatchProcessor:
         
         results = {
             "batch_id": batch_id,
-            "total_requested": len(tracking_numbers),
+            "total_requested": len(tracking_data),
             "successful": 0,
             "failed": 0,
             "results": [],
@@ -265,51 +264,51 @@ class BatchProcessor:
         }
         
         try:
-            # Check rate limits
             remaining = api_usage_repo.get_remaining_requests(self.daily_limit)
             
             if remaining <= 0:
                 logger.warning("Daily API limit reached")
-                results["failed"] = len(tracking_numbers)
+                results["failed"] = len(tracking_data)
                 results["error"] = "Daily API limit reached"
                 return results
             
-            # Limit to remaining requests
-            if len(tracking_numbers) > remaining:
-                logger.warning(f"Limiting batch from {len(tracking_numbers)} to {remaining} (remaining quota)")
-                tracking_numbers = tracking_numbers[:remaining]
-                results["total_requested"] = len(tracking_numbers)
+            if len(tracking_data) > remaining:
+                logger.warning(f"Limiting batch from {len(tracking_data)} to {remaining} (remaining quota)")
+                tracking_data = tracking_data[:remaining]
+                results["total_requested"] = len(tracking_data)
             
             # Check for existing cached records
-            existing_records = tracking_repo.get_multiple(tracking_numbers)
+            waybills_only = [waybill for waybill, _ in tracking_data]
+            existing_records = tracking_repo.get_multiple(waybills_only)
             existing_map = {r.tracking_number: r for r in existing_records}
             
-            # Separate new and cached tracking numbers
-            new_tracking_numbers = []
+            new_tracking_data = []
             cached_results = []
             
-            for tn in tracking_numbers:
-                if tn in existing_map:
-                    record = existing_map[tn]
-                    # Use cached data if recent (less than 1 hour old)
+            for waybill, bin_id in tracking_data:
+                if waybill in existing_map:
+                    record = existing_map[waybill]
+                    # Update binID if it was None before
+                    if bin_id and not record.bin_id:
+                        record.bin_id = bin_id
+                        tracking_repo.update(waybill, {'bin_id': bin_id})
+                    
                     if record.last_checked and (datetime.utcnow() - record.last_checked).seconds < 3600:
                         cached_results.append(record)
-                        logger.info(f"Using cached data for {tn}")
+                        logger.info(f"Using cached data for {waybill} (binID: {bin_id})")
                     else:
-                        new_tracking_numbers.append(tn)
+                        new_tracking_data.append((waybill, bin_id))
                 else:
-                    new_tracking_numbers.append(tn)
+                    new_tracking_data.append((waybill, bin_id))
             
-            # Process new tracking numbers with multi-retry
-            if new_tracking_numbers:
+            if new_tracking_data:
                 processing_result = await self._process_with_multi_retry(
-                    new_tracking_numbers,
+                    new_tracking_data,
                     tracking_repo,
                     api_usage_repo,
                     batch_id
                 )
                 
-                # Get successful results from database (includes all retries)
                 successful_records = [
                     tracking_repo.get_by_tracking_number(r['tracking_number'])
                     for r in processing_result["successful_results"]
@@ -321,35 +320,32 @@ class BatchProcessor:
                 results["failed"] = len(processing_result["failed_waybills"])
                 results["api_calls_made"] = processing_result["total_api_calls"]
             
-            # Add cached results
             results["results"].extend(cached_results)
             results["successful"] += len(cached_results)
             
-            # Calculate processing time
             end_time = datetime.now()
             results["processing_time"] = (end_time - start_time).total_seconds()
             
-            # Final summary log
             logger.info(f"\n{'='*80}")
             logger.info(f"BATCH {batch_id} COMPLETE")
             logger.info(f"{'='*80}")
-            logger.info(f" Successful: {results['successful']}/{results['total_requested']}")
-            logger.info(f" Failed: {results['failed']}/{results['total_requested']}")
-            logger.info(f" API calls made: {results['api_calls_made']}")
-            logger.info(f"  Processing time: {results['processing_time']:.2f}s")
+            logger.info(f"Successful: {results['successful']}/{results['total_requested']}")
+            logger.info(f"Failed: {results['failed']}/{results['total_requested']}")
+            logger.info(f"API calls made: {results['api_calls_made']}")
+            logger.info(f"Processing time: {results['processing_time']:.2f}s")
             logger.info(f"{'='*80}\n")
             
             return results
             
         except Exception as e:
-            logger.error(f" Batch processing error: {str(e)}")
-            results["failed"] = len(tracking_numbers)
+            logger.error(f"Batch processing error: {str(e)}")
+            results["failed"] = len(tracking_data)
             results["error"] = str(e)
             return results
     
     async def process_large_batch(
         self,
-        tracking_numbers: List[str],
+        tracking_data: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository,
         progress_callback: Optional[callable] = None
@@ -357,8 +353,10 @@ class BatchProcessor:
         """
         Process large batch - uses same multi-retry system
         
+        UPDATED: Now accepts List[Tuple[waybill, binID]]
+        
         Args:
-            tracking_numbers: List of tracking numbers
+            tracking_data: List of tuples [(waybill, binID), ...]
             tracking_repo: Tracking repository
             api_usage_repo: API usage repository
             progress_callback: Optional callback for progress updates
@@ -366,12 +364,11 @@ class BatchProcessor:
         Returns:
             Complete results with all retries processed
         """
-        logger.info(f" Starting large batch processing for {len(tracking_numbers)} waybills")
+        logger.info(f"Starting large batch processing for {len(tracking_data)} waybills")
         logger.info(f"Retry strategy: Up to {self.max_retries} attempts per failed waybill")
         
-        # Use the main batch processor which handles everything
         result = await self.process_batch(
-            tracking_numbers,
+            tracking_data,
             tracking_repo,
             api_usage_repo
         )
@@ -379,25 +376,11 @@ class BatchProcessor:
         return result
     
     def calculate_estimated_time(self, count: int) -> float:
-        """
-        Calculate estimated processing time including retries
-        
-        Args:
-            count: Number of tracking numbers
-            
-        Returns:
-            Estimated time in seconds
-        """
-        # Calculate batches
+        """Calculate estimated processing time including retries"""
         batches = (count + self.batch_size - 1) // self.batch_size
-        
-        # Base time: batches with delays + processing
         base_time = (batches - 1) * self.batch_delay
         processing_time = count * 0.5
-        
-        # Retry buffer (assume 10% failure rate, 2 retries average)
         retry_buffer = (count * 0.1) * 2 * (self.retry_delay + 5)
-        
         total = base_time + processing_time + retry_buffer
-        
         return total
+
