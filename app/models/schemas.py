@@ -2,18 +2,14 @@
 Pydantic schemas for request/response validation
 Ensures type safety and data validation
 
-CHANGES MADE:
-1. TrackingResponse: Added bin_id field (Line 44)
-2. PlainTextBulkRequest: Updated validator to parse "waybill,binID" format (Lines 113-165)
-3. PlainTextExportRequest: Updated validator to parse "waybill,binID" format (Lines 292-344)
-4. New helper class: WaybillBinIDPair for internal use (Lines 34-39)
+FINAL VERSION - Simple text area input matching single tracking style
 """
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 from enum import Enum
 
- 
+
 class ExportFormat(str, Enum):
     """Export format options"""
     PDF = "pdf"
@@ -106,91 +102,58 @@ class BulkTrackingRequest(BaseModel):
 
 class PlainTextBulkRequest(BaseModel):
     """
-    Request for bulk tracking with smart text input
-    Accepts multiple formats for flexibility
+    Simple bulk tracking request - one text area
+    Format: waybill,binID per line
     """
-    tracking_numbers_text: str = Field(
+    tracking_data: str = Field(
         ..., 
-        description="Paste your tracking data here. Flexible formats accepted:\n"
-                    "• Copy directly from Excel (tab-separated)\n"
-                    "• waybill,binID (comma-separated)\n"
-                    "• waybill|binID (pipe-separated)\n"
-                    "• waybill  binID (space-separated)\n"
-                    "• Just waybills (one per line)",
+        description="Enter tracking data (one per line)\nFormat: waybill,binID",
         min_length=1
     )
     
-    @validator('tracking_numbers_text')
-    def parse_tracking_numbers(cls, v):
+    @validator('tracking_data')
+    def parse_tracking_data(cls, v):
         """
-        SMART PARSER: Accepts multiple formats
-        - Tab-separated (Excel paste): waybill\tbinID
-        - Comma-separated: waybill,binID
-        - Pipe-separated: waybill|binID
-        - Space-separated: waybill binID (2+ spaces)
-        - Just waybills: one per line
-        
+        Parse text area input
+        Accepts: waybill,binID per line
         Returns: List[Tuple[waybill, binID]]
         """
         if not v or not v.strip():
-            raise ValueError("No tracking numbers provided")
+            raise ValueError("No tracking data provided")
         
         lines = v.strip().split('\n')
-        tracking_data = []
+        tracking_list = []
         
         for line_num, line in enumerate(lines, 1):
             cleaned = line.strip()
             if not cleaned:
                 continue
             
-            waybill = None
-            bin_id = None
-            
-            # Try different separators in order of likelihood
-            # 1. Tab-separated (Excel default)
-            if '\t' in cleaned:
-                parts = cleaned.split('\t')
-                waybill = parts[0].strip().upper()
-                bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            
-            # 2. Comma-separated
-            elif ',' in cleaned:
+            # Parse waybill,binID
+            if ',' in cleaned:
                 parts = cleaned.split(',', 1)
                 waybill = parts[0].strip().upper()
                 bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            
-            # 3. Pipe-separated
-            elif '|' in cleaned:
-                parts = cleaned.split('|', 1)
-                waybill = parts[0].strip().upper()
-                bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            
-            # 4. Multiple spaces (at least 2 spaces to avoid single-word with space)
-            elif '  ' in cleaned:  # Two or more spaces
-                parts = cleaned.split(None, 1)  # Split on any whitespace
-                waybill = parts[0].strip().upper()
-                bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            
-            # 5. Just waybill (no separator)
             else:
+                # Just waybill
                 waybill = cleaned.upper()
                 bin_id = None
             
             if not waybill:
                 raise ValueError(f"Line {line_num}: Waybill cannot be empty")
             
-            tracking_data.append((waybill, bin_id))
+            tracking_list.append((waybill, bin_id))
         
-        if not tracking_data:
+        if not tracking_list:
             raise ValueError("No valid tracking data found")
         
-        if len(tracking_data) > 1000:
-            raise ValueError("Maximum 1000 tracking numbers allowed")
+        if len(tracking_list) > 1000:
+            raise ValueError("Maximum 1000 records allowed")
         
-        # Remove duplicates while preserving order
+        # Remove duplicates
         seen = set()
         unique = []
-        for waybill, bin_id in tracking_data:
+        for waybill, bin_id in tracking_list:
             if waybill not in seen:
                 seen.add(waybill)
                 unique.append((waybill, bin_id))
@@ -200,7 +163,7 @@ class PlainTextBulkRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "tracking_numbers_text": "5859187246\tBI01FSTD00001002\n2079797893\tBI01FSTS00010573\n1010019043\tBI01FSTD00001003"
+                "tracking_data": "5859187246,BI01FSTD00001002\n2079797893,BI01FSTS00010573\n1010019043,BI01FSTD00001003"
             }
         }
 
@@ -245,57 +208,36 @@ class ExportRequest(BaseModel):
 
 class PlainTextExportRequest(BaseModel):
     """
-    Request for exporting tracking data with smart text input
+    Simple export request - one text area
+    Format: waybill,binID per line
     """
-    tracking_numbers_text: str = Field(
+    tracking_data: str = Field(
         ..., 
-        description="Paste your tracking data here. Flexible formats accepted:\n"
-                    "• Copy directly from Excel (tab-separated)\n"
-                    "• waybill,binID (comma-separated)\n"
-                    "• waybill|binID (pipe-separated)\n"
-                    "• waybill  binID (space-separated)\n"
-                    "• Just waybills (one per line)"
+        description="Enter tracking data (one per line)\nFormat: waybill,binID"
     )
     format: ExportFormat = ExportFormat.PDF
     include_details: bool = True
     
-    @validator('tracking_numbers_text')
-    def parse_tracking_numbers(cls, v):
+    @validator('tracking_data')
+    def parse_tracking_data(cls, v):
         """
-        SMART PARSER: Accepts multiple formats
-        Same logic as PlainTextBulkRequest
-        
+        Parse text area input
+        Accepts: waybill,binID per line
         Returns: List[Tuple[waybill, binID]]
         """
         if not v or not v.strip():
-            raise ValueError("No tracking numbers provided")
+            raise ValueError("No tracking data provided")
         
         lines = v.strip().split('\n')
-        tracking_data = []
+        tracking_list = []
         
         for line_num, line in enumerate(lines, 1):
             cleaned = line.strip()
             if not cleaned:
                 continue
             
-            waybill = None
-            bin_id = None
-            
-            # Try different separators
-            if '\t' in cleaned:
-                parts = cleaned.split('\t')
-                waybill = parts[0].strip().upper()
-                bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            elif ',' in cleaned:
+            if ',' in cleaned:
                 parts = cleaned.split(',', 1)
-                waybill = parts[0].strip().upper()
-                bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            elif '|' in cleaned:
-                parts = cleaned.split('|', 1)
-                waybill = parts[0].strip().upper()
-                bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            elif '  ' in cleaned:
-                parts = cleaned.split(None, 1)
                 waybill = parts[0].strip().upper()
                 bin_id = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
             else:
@@ -305,15 +247,15 @@ class PlainTextExportRequest(BaseModel):
             if not waybill:
                 raise ValueError(f"Line {line_num}: Waybill cannot be empty")
             
-            tracking_data.append((waybill, bin_id))
+            tracking_list.append((waybill, bin_id))
         
-        if not tracking_data:
+        if not tracking_list:
             raise ValueError("No valid tracking data found")
         
         # Remove duplicates
         seen = set()
         unique = []
-        for waybill, bin_id in tracking_data:
+        for waybill, bin_id in tracking_list:
             if waybill not in seen:
                 seen.add(waybill)
                 unique.append((waybill, bin_id))
@@ -323,7 +265,7 @@ class PlainTextExportRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "tracking_numbers_text": "5859187246\tBI01FSTD00001002\n2079797893\tBI01FSTS00010573",
+                "tracking_data": "5859187246,BI01FSTD00001002\n2079797893,BI01FSTS00010573\n1010019043,BI01FSTD00001003",
                 "format": "pdf",
                 "include_details": True
             }
@@ -412,3 +354,4 @@ class HealthCheckResponse(BaseModel):
                 "api_available": True
             }
         }
+
