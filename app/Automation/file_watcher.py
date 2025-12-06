@@ -116,7 +116,11 @@ class FileWatcher:
         except Exception as e:
             logger.error(f"Error moving file to failed: {e}")
             raise
-           
+
+    def mark_as_processed(self,filename: str):
+        """Set a processed tag"""
+
+        self.processed_files.add(filename)       
 
 
        
