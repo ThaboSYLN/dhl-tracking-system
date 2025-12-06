@@ -39,3 +39,6 @@ mypy==1.8.0
 #db Driver for deployment
 psycopg2-binary==2.9.9
 aiofiles==23.2.1
+
+apscheduler==3.10.4
+pyYAML==6.0.1
