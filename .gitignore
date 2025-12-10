@@ -11,10 +11,7 @@ __pycache__/
 
 # Database
 data/*.db
-*.log
-
-# Exports folder
-exports/
+.pyc
 
 # Python virtual environment
 Traker_Env_Venv/

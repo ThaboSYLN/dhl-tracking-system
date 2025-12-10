@@ -137,7 +137,7 @@ class FileProcessor:
                     logger.info(f"Using second column as binID: {binid_col}")
             
             # Extract waybills
-            waybills = df[waybill_col].astype(str).str.strip().tolist()
+            waybills = df[waybill_col].astype(str).str.strip(" ").tolist()
             
             # Extract binIDs if column exists
             if binid_col:
@@ -209,7 +209,8 @@ class FileProcessor:
                     logger.info(f"Using second column as binID: {binid_col}")
             
             # Extract waybills
-            waybills = df[waybill_col].astype(str).str.strip().tolist()
+           # waybills = df[waybill_col].astype(str).str.strip().tolist()
+            waybills = df[waybill_col].astype(str).str.replace(' ', '').tolist()
             
             # Extract binIDs if column exists
             if binid_col:

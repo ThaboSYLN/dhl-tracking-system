@@ -1,0 +1,50 @@
+# Automation Configuration - Configured for soj3serv07
+
+automation:
+  enabled: true
+  
+  # Multiple inbox folders - system will scan ALL enabled folders
+  inbox_folders:
+    # Local folder (keep for testing)
+    - path: "./data/inbox"
+      type: "local"
+      enabled: true
+      name: "Local Inbox"
+    
+    # Your network folder on soj3serv07
+    - path: "\\\\soj3serv07\\Production To Office\\DHL\\inbox"
+      type: "network"
+      enabled: true
+      name: "DHL Production Server"
+      credentials:
+        username: ""  # Leave empty if not needed, or add: "DOMAIN\\username"
+        password: ""  # Leave empty if not needed
+  
+  # Where to move processed/failed files
+  processed_folder: "./data/processed"
+  failed_folder: "./data/failed"
+  
+  # Scheduling
+  schedule:
+    time: "09:00"
+    enabled: true
+  
+  # Processing settings
+  processing:
+    immediate_process: true
+    max_retries: 3
+    watch_interval: 10  # Check every 10 seconds
+  
+  # Auto-generate PDF reports after processing
+  auto_reports:
+    enabled: true
+    format: "pdf"
+    export_folder: "./exports"
+    include_details: true
+    timestamp_format: "%Y%m%d_%H%M%S"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  keep_days: 30
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
