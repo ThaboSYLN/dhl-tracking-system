@@ -7,8 +7,12 @@ app = FastAPI()
 
 def run_automation_script():
     """
+<<<<<<< HEAD
     Function to execute the auto
     mation script via subprocess.
+=======
+    Function to execute the automation script via subprocess.
+>>>>>>> de3ca197708a6c1a2333d9212db86660c5bf375f
     This runs in an external threadpool, allowing the FastAPI event loop to remain free.
     """
     command_str = "python -m app.Automation.automation_service"
