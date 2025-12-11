@@ -112,6 +112,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+from app.api.V1 import tracking, export, automation_api
+app.include_router(automation_api.router, prefix=settings.API_V1_PREFIX) 
 
 # Include routers
 app.include_router(tracking.router, prefix=settings.API_V1_PREFIX)
