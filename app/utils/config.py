@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "./data/app.log"
+
+    # Email settings
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str
+    SMTP_PASSWORD: str
+    EMAIL_FROM: str
+    EMAIL_TO: str
     
     class Config:
         env_file = ".env" #or env_file = ".env.example"

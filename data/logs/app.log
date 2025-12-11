@@ -1,0 +1,888 @@
+2025-12-11 23:12:14 - root - INFO - ================================================================================
+2025-12-11 23:12:14 - root - INFO - Logging system initialized - Level: INFO
+2025-12-11 23:12:14 - root - INFO - Logs directory: C:\Users\Asithandile\Downloads\dhl-tracking-system\data\logs
+2025-12-11 23:12:14 - root - INFO - App Log: data\logs\app.log
+2025-12-11 23:12:14 - root - INFO - Automation Log: data\logs\automation.log
+2025-12-11 23:12:14 - root - INFO - Error Log: data\logs\errors.log
+2025-12-11 23:12:14 - root - INFO - Scheduler Log: data\logs\scheduler.log
+2025-12-11 23:12:14 - root - INFO - ================================================================================
+2025-12-11 23:12:14 - __main__ - INFO - Configuration loaded from ./config/automation_config.yaml
+2025-12-11 23:12:14 - app.Automation.file_watcher - INFO - --> Folder accessible: Local Inbox -> data\inbox
+2025-12-11 23:12:17 - app.Automation.file_watcher - ERROR - X-> Error accessing DHL Production Server: [WinError 53] The network path was not found: '\\\\soj3serv07\\Production To Office\\'
+2025-12-11 23:12:17 - app.Automation.file_watcher - INFO - File Watcher initialized
+2025-12-11 23:12:17 - app.Automation.file_watcher - INFO - Monitoring 2 inbox folder(s)
+2025-12-11 23:12:17 - app.Automation.file_watcher - INFO - Processed: data\processed
+2025-12-11 23:12:17 - app.Automation.file_watcher - INFO - Failed: data\failed
+2025-12-11 23:12:17 - app.Automation.scheduler - INFO - Automation Scheduler initialized
+2025-12-11 23:12:17 - __main__ - INFO - :) Automation Service initialized
+2025-12-11 23:12:17 - __main__ - INFO - ============================================================
+2025-12-11 23:12:17 - __main__ - INFO - --> Starting DHL Tracking Automation Service
+2025-12-11 23:12:17 - __main__ - INFO - ============================================================
+2025-12-11 23:12:17 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-11 23:12:17 - app.Automation.scheduler - INFO - Scheduled task 'daily_file_scan' at 09:00 daily
+2025-12-11 23:12:17 - apscheduler.scheduler - INFO - Added job "daily_file_scan" to job store "default"
+2025-12-11 23:12:17 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-11 23:12:17 - app.Automation.scheduler - INFO - --> Scheduler started
+2025-12-11 23:12:17 - app.Automation.scheduler - INFO - Next run for 'daily_file_scan': 2025-12-12 09:00:00+02:00
+2025-12-11 23:12:17 - __main__ - INFO - 📅 Scheduled daily scan at 09:00
+2025-12-11 23:12:17 - __main__ - INFO - 📄 Auto-reports enabled (PDF format)
+2025-12-11 23:12:17 - __main__ - INFO - ⚡ Immediate processing enabled
+2025-12-11 23:12:17 - __main__ - INFO - 👁️ File watcher started (checking every 10 seconds)
+2025-12-11 23:12:17 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:12:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:12:17 - __main__ - INFO - No new files found
+2025-12-11 23:12:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:12:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:12:27 - __main__ - INFO - No new files found
+2025-12-11 23:12:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:12:37 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:12:37 - __main__ - INFO - No new files found
+2025-12-11 23:12:47 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:12:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:12:50 - __main__ - INFO - No new files found
+2025-12-11 23:13:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:13:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:13:00 - __main__ - INFO - No new files found
+2025-12-11 23:13:10 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:13:10 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:13:10 - __main__ - INFO - No new files found
+2025-12-11 23:13:20 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:13:24 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:13:24 - __main__ - INFO - Found 1 new file(s)
+2025-12-11 23:13:24 - __main__ - INFO - Processing file: waybills.csv (from: Local Inbox)
+2025-12-11 23:13:24 - app.core.file_processor - INFO - File saved: ./data/uploads\upload_20251211_231324.csv
+2025-12-11 23:13:24 - app.core.file_processor - INFO - No binID column found, all binIDs will be None
+2025-12-11 23:13:24 - app.core.file_processor - INFO - Extracted 4 tracking records from CSV
+2025-12-11 23:13:24 - app.core.file_processor - INFO - Cleaned up file: ./data/uploads\upload_20251211_231324.csv
+2025-12-11 23:13:24 - __main__ - INFO - Extracted 4 records from waybills.csv
+2025-12-11 23:13:24 - app.core.batch_processor - ERROR - Batch processing error: (sqlite3.OperationalError) no such table: api_usage
+[SQL: SELECT api_usage.id AS api_usage_id, api_usage.date AS api_usage_date, api_usage.request_count AS api_usage_request_count, api_usage.successful_requests AS api_usage_successful_requests, api_usage.failed_requests AS api_usage_failed_requests, api_usage.created_at AS api_usage_created_at, api_usage.updated_at AS api_usage_updated_at 
+FROM api_usage 
+WHERE api_usage.date = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('2025-12-11', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-12-11 23:13:24 - __main__ - INFO - Processing complete: 0 successful, 4 failed
+2025-12-11 23:13:24 - app.Automation.file_watcher - INFO - Moved to processed: waybills.csv -> Local_Inbox_waybills_20251211_231324.csv
+2025-12-11 23:13:24 - __main__ - INFO - 📄 Generating automatic report for 4 records...
+2025-12-11 23:13:24 - __main__ - ERROR - Error generating report: (sqlite3.OperationalError) no such table: tracking_records
+[SQL: SELECT tracking_records.id AS tracking_records_id, tracking_records.tracking_number AS tracking_records_tracking_number, tracking_records.bin_id AS tracking_records_bin_id, tracking_records.status_code AS tracking_records_status_code, tracking_records.status AS tracking_records_status, tracking_records.origin AS tracking_records_origin, tracking_records.destination AS tracking_records_destination, tracking_records.tracking_details AS tracking_records_tracking_details, tracking_records.batch_id AS tracking_records_batch_id, tracking_records.is_successful AS tracking_records_is_successful, tracking_records.error_message AS tracking_records_error_message, tracking_records.created_at AS tracking_records_created_at, tracking_records.updated_at AS tracking_records_updated_at, tracking_records.last_checked AS tracking_records_last_checked 
+FROM tracking_records 
+WHERE tracking_records.tracking_number IN (?, ?, ?, ?)]
+[parameters: ('1621160925', '2906450470', '9545652756', '5196705570')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-12-11 23:13:24 - __main__ - INFO - ✅ Scan and process complete
+2025-12-11 23:13:34 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:13:34 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:13:34 - __main__ - INFO - No new files found
+2025-12-11 23:13:44 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:13:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:13:44 - __main__ - INFO - No new files found
+2025-12-11 23:13:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:13:57 - app.Automation.file_watcher - ERROR - Error scanning DHL Production Server: [WinError 64] The specified network name is no longer available: '\\\\soj3serv07\\Production To Office\\DHL\\inbox'
+2025-12-11 23:13:57 - __main__ - INFO - No new files found
+2025-12-11 23:14:07 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:14:07 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:14:07 - __main__ - INFO - No new files found
+2025-12-11 23:14:17 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:14:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:14:17 - __main__ - INFO - No new files found
+2025-12-11 23:14:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:14:30 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:14:30 - __main__ - INFO - No new files found
+2025-12-11 23:14:40 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:14:40 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:14:40 - __main__ - INFO - No new files found
+2025-12-11 23:14:50 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:14:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:14:50 - __main__ - INFO - No new files found
+2025-12-11 23:15:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:15:03 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:15:03 - __main__ - INFO - No new files found
+2025-12-11 23:15:13 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:15:13 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:15:13 - __main__ - INFO - No new files found
+2025-12-11 23:15:23 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:15:23 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:15:23 - __main__ - INFO - No new files found
+2025-12-11 23:15:33 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:15:35 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:15:35 - __main__ - INFO - No new files found
+2025-12-11 23:15:45 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:15:45 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:15:45 - __main__ - INFO - No new files found
+2025-12-11 23:15:55 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:15:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:15:55 - __main__ - INFO - No new files found
+2025-12-11 23:16:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:16:08 - app.Automation.file_watcher - ERROR - Error scanning DHL Production Server: [WinError 64] The specified network name is no longer available: '\\\\soj3serv07\\Production To Office\\DHL\\inbox'
+2025-12-11 23:16:08 - __main__ - INFO - No new files found
+2025-12-11 23:16:18 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:16:18 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:16:18 - __main__ - INFO - No new files found
+2025-12-11 23:16:28 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:16:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:16:28 - __main__ - INFO - No new files found
+2025-12-11 23:16:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:16:41 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:16:41 - __main__ - INFO - No new files found
+2025-12-11 23:16:51 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:16:51 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:16:51 - __main__ - INFO - No new files found
+2025-12-11 23:17:01 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:17:01 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:17:01 - __main__ - INFO - No new files found
+2025-12-11 23:17:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:17:14 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:17:14 - __main__ - INFO - No new files found
+2025-12-11 23:17:24 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:17:24 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:17:24 - __main__ - INFO - No new files found
+2025-12-11 23:17:34 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:17:34 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:17:34 - __main__ - INFO - No new files found
+2025-12-11 23:17:44 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:17:46 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:17:46 - __main__ - INFO - No new files found
+2025-12-11 23:17:56 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:17:56 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:17:56 - __main__ - INFO - No new files found
+2025-12-11 23:18:06 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:18:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:18:06 - __main__ - INFO - No new files found
+2025-12-11 23:18:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:18:19 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:18:19 - __main__ - INFO - No new files found
+2025-12-11 23:18:29 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:18:29 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:18:29 - __main__ - INFO - No new files found
+2025-12-11 23:18:39 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:18:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:18:39 - __main__ - INFO - No new files found
+2025-12-11 23:18:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:18:52 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:18:52 - __main__ - INFO - No new files found
+2025-12-11 23:19:02 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:19:02 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:19:02 - __main__ - INFO - No new files found
+2025-12-11 23:19:12 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:19:12 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:19:12 - __main__ - INFO - No new files found
+2025-12-11 23:19:22 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:19:24 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:19:24 - __main__ - INFO - No new files found
+2025-12-11 23:19:34 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:19:34 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:19:34 - __main__ - INFO - No new files found
+2025-12-11 23:19:44 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:19:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:19:44 - __main__ - INFO - No new files found
+2025-12-11 23:19:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:19:57 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:19:57 - __main__ - INFO - No new files found
+2025-12-11 23:20:07 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:20:07 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:20:07 - __main__ - INFO - No new files found
+2025-12-11 23:20:17 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:20:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:20:17 - __main__ - INFO - No new files found
+2025-12-11 23:20:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:20:30 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:20:30 - __main__ - INFO - No new files found
+2025-12-11 23:20:40 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:20:40 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:20:40 - __main__ - INFO - No new files found
+2025-12-11 23:20:50 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:20:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:20:50 - __main__ - INFO - No new files found
+2025-12-11 23:21:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:21:03 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:21:03 - __main__ - INFO - No new files found
+2025-12-11 23:21:13 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:21:13 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:21:13 - __main__ - INFO - No new files found
+2025-12-11 23:21:23 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:21:23 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:21:23 - __main__ - INFO - No new files found
+2025-12-11 23:21:33 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:21:35 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:21:35 - __main__ - INFO - No new files found
+2025-12-11 23:21:45 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:21:45 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:21:45 - __main__ - INFO - No new files found
+2025-12-11 23:21:55 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:21:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:21:55 - __main__ - INFO - No new files found
+2025-12-11 23:22:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:22:08 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:22:08 - __main__ - INFO - No new files found
+2025-12-11 23:22:18 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:22:18 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:22:18 - __main__ - INFO - No new files found
+2025-12-11 23:22:28 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:22:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:22:28 - __main__ - INFO - No new files found
+2025-12-11 23:22:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:22:41 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:22:41 - __main__ - INFO - No new files found
+2025-12-11 23:22:51 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:22:51 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:22:51 - __main__ - INFO - No new files found
+2025-12-11 23:23:01 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:23:01 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:23:01 - __main__ - INFO - No new files found
+2025-12-11 23:23:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:23:14 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:23:14 - __main__ - INFO - No new files found
+2025-12-11 23:23:24 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:23:24 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:23:24 - __main__ - INFO - No new files found
+2025-12-11 23:23:34 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:23:34 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:23:34 - __main__ - INFO - No new files found
+2025-12-11 23:23:44 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:23:46 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:23:46 - __main__ - INFO - No new files found
+2025-12-11 23:23:56 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:23:56 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:23:56 - __main__ - INFO - No new files found
+2025-12-11 23:24:06 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:24:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:24:06 - __main__ - INFO - No new files found
+2025-12-11 23:24:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:24:19 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:24:19 - __main__ - INFO - No new files found
+2025-12-11 23:24:29 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:24:29 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:24:29 - __main__ - INFO - No new files found
+2025-12-11 23:24:39 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:24:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:24:39 - __main__ - INFO - No new files found
+2025-12-11 23:24:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:24:52 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:24:52 - __main__ - INFO - No new files found
+2025-12-11 23:25:02 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:25:02 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:25:02 - __main__ - INFO - No new files found
+2025-12-11 23:25:12 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:25:12 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:25:12 - __main__ - INFO - No new files found
+2025-12-11 23:25:22 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:25:24 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:25:24 - __main__ - INFO - No new files found
+2025-12-11 23:25:34 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:25:34 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:25:34 - __main__ - INFO - No new files found
+2025-12-11 23:25:44 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:25:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:25:44 - __main__ - INFO - No new files found
+2025-12-11 23:25:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:25:57 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:25:57 - __main__ - INFO - No new files found
+2025-12-11 23:26:07 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:26:07 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:26:07 - __main__ - INFO - No new files found
+2025-12-11 23:26:17 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:26:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:26:17 - __main__ - INFO - No new files found
+2025-12-11 23:26:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:26:30 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:26:30 - __main__ - INFO - No new files found
+2025-12-11 23:26:40 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:26:40 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:26:40 - __main__ - INFO - No new files found
+2025-12-11 23:26:50 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:26:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:26:50 - __main__ - INFO - No new files found
+2025-12-11 23:27:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:27:03 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:27:03 - __main__ - INFO - No new files found
+2025-12-11 23:27:13 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:27:13 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:27:13 - __main__ - INFO - No new files found
+2025-12-11 23:27:23 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:27:23 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:27:23 - __main__ - INFO - No new files found
+2025-12-11 23:27:33 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:27:35 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:27:35 - __main__ - INFO - No new files found
+2025-12-11 23:27:45 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:27:45 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:27:45 - __main__ - INFO - No new files found
+2025-12-11 23:27:55 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:27:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:27:55 - __main__ - INFO - No new files found
+2025-12-11 23:28:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:28:08 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:28:08 - __main__ - INFO - No new files found
+2025-12-11 23:28:18 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:28:18 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:28:18 - __main__ - INFO - No new files found
+2025-12-11 23:28:28 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:28:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:28:28 - __main__ - INFO - No new files found
+2025-12-11 23:28:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:28:41 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:28:41 - __main__ - INFO - No new files found
+2025-12-11 23:28:51 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:28:51 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:28:51 - __main__ - INFO - No new files found
+2025-12-11 23:29:01 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:29:01 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:29:01 - __main__ - INFO - No new files found
+2025-12-11 23:29:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:29:11 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:29:11 - __main__ - INFO - No new files found
+2025-12-11 23:29:21 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:29:23 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:29:23 - __main__ - INFO - No new files found
+2025-12-11 23:29:33 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:29:33 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:29:33 - __main__ - INFO - No new files found
+2025-12-11 23:29:43 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:29:43 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:29:43 - __main__ - INFO - No new files found
+2025-12-11 23:29:53 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:29:56 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:29:56 - __main__ - INFO - No new files found
+2025-12-11 23:30:06 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:30:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:30:06 - __main__ - INFO - No new files found
+2025-12-11 23:30:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:30:16 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:30:16 - __main__ - INFO - No new files found
+2025-12-11 23:30:26 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:30:29 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:30:29 - __main__ - INFO - No new files found
+2025-12-11 23:30:39 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:30:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:30:39 - __main__ - INFO - No new files found
+2025-12-11 23:30:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:30:49 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:30:49 - __main__ - INFO - No new files found
+2025-12-11 23:30:59 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:31:02 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:31:02 - __main__ - INFO - No new files found
+2025-12-11 23:31:12 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:31:12 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:31:12 - __main__ - INFO - No new files found
+2025-12-11 23:31:22 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:31:22 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:31:22 - __main__ - INFO - No new files found
+2025-12-11 23:31:32 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:31:34 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:31:34 - __main__ - INFO - No new files found
+2025-12-11 23:31:44 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:31:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:31:44 - __main__ - INFO - No new files found
+2025-12-11 23:31:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:31:54 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:31:54 - __main__ - INFO - No new files found
+2025-12-11 23:32:04 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:32:07 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:32:07 - __main__ - INFO - No new files found
+2025-12-11 23:32:17 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:32:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:32:17 - __main__ - INFO - No new files found
+2025-12-11 23:32:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:32:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:32:27 - __main__ - INFO - No new files found
+2025-12-11 23:32:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:32:40 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:32:40 - __main__ - INFO - No new files found
+2025-12-11 23:32:50 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:32:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:32:50 - __main__ - INFO - No new files found
+2025-12-11 23:33:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:33:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:33:00 - __main__ - INFO - No new files found
+2025-12-11 23:33:10 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:33:13 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:33:13 - __main__ - INFO - No new files found
+2025-12-11 23:33:23 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:33:23 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:33:23 - __main__ - INFO - No new files found
+2025-12-11 23:33:33 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:33:33 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:33:33 - __main__ - INFO - No new files found
+2025-12-11 23:33:43 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:33:43 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:33:43 - __main__ - INFO - No new files found
+2025-12-11 23:33:53 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:33:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:33:55 - __main__ - INFO - No new files found
+2025-12-11 23:34:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:34:05 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:34:05 - __main__ - INFO - No new files found
+2025-12-11 23:34:15 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:34:15 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:34:15 - __main__ - INFO - No new files found
+2025-12-11 23:34:25 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:34:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:34:28 - __main__ - INFO - No new files found
+2025-12-11 23:34:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:34:38 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:34:38 - __main__ - INFO - No new files found
+2025-12-11 23:34:48 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:34:48 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:34:48 - __main__ - INFO - No new files found
+2025-12-11 23:34:58 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:35:01 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:35:01 - __main__ - INFO - No new files found
+2025-12-11 23:35:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:35:11 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:35:11 - __main__ - INFO - No new files found
+2025-12-11 23:35:21 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:35:21 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:35:21 - __main__ - INFO - No new files found
+2025-12-11 23:35:31 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:35:33 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:35:33 - __main__ - INFO - No new files found
+2025-12-11 23:35:43 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:35:43 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:35:43 - __main__ - INFO - No new files found
+2025-12-11 23:35:53 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:35:53 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:35:53 - __main__ - INFO - No new files found
+2025-12-11 23:36:03 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:36:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:36:06 - __main__ - INFO - No new files found
+2025-12-11 23:36:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:36:16 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:36:16 - __main__ - INFO - No new files found
+2025-12-11 23:36:26 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:36:26 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:36:26 - __main__ - INFO - No new files found
+2025-12-11 23:36:36 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:36:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:36:39 - __main__ - INFO - No new files found
+2025-12-11 23:36:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:36:49 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:36:49 - __main__ - INFO - No new files found
+2025-12-11 23:36:59 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:36:59 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:36:59 - __main__ - INFO - No new files found
+2025-12-11 23:37:09 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:37:12 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:37:12 - __main__ - INFO - No new files found
+2025-12-11 23:37:22 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:37:22 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:37:22 - __main__ - INFO - No new files found
+2025-12-11 23:37:32 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:37:32 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:37:32 - __main__ - INFO - No new files found
+2025-12-11 23:37:42 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:37:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:37:44 - __main__ - INFO - No new files found
+2025-12-11 23:37:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:37:54 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:37:54 - __main__ - INFO - No new files found
+2025-12-11 23:38:04 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:38:04 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:38:04 - __main__ - INFO - No new files found
+2025-12-11 23:38:14 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:38:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:38:17 - __main__ - INFO - No new files found
+2025-12-11 23:38:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:38:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:38:27 - __main__ - INFO - No new files found
+2025-12-11 23:38:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:38:37 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:38:37 - __main__ - INFO - No new files found
+2025-12-11 23:38:47 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:38:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:38:50 - __main__ - INFO - No new files found
+2025-12-11 23:39:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:39:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:39:00 - __main__ - INFO - No new files found
+2025-12-11 23:39:10 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:39:10 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:39:10 - __main__ - INFO - No new files found
+2025-12-11 23:39:20 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:39:22 - app.Automation.file_watcher - ERROR - Error scanning DHL Production Server: [WinError 64] The specified network name is no longer available: '\\\\soj3serv07\\Production To Office\\DHL\\inbox'
+2025-12-11 23:39:22 - __main__ - INFO - No new files found
+2025-12-11 23:39:32 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:39:32 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:39:32 - __main__ - INFO - No new files found
+2025-12-11 23:39:42 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:39:42 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:39:42 - __main__ - INFO - No new files found
+2025-12-11 23:39:52 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:39:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:39:55 - __main__ - INFO - No new files found
+2025-12-11 23:40:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:40:05 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:40:05 - __main__ - INFO - No new files found
+2025-12-11 23:40:15 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:40:15 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:40:15 - __main__ - INFO - No new files found
+2025-12-11 23:40:25 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:40:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:40:28 - __main__ - INFO - No new files found
+2025-12-11 23:40:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:40:38 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:40:38 - __main__ - INFO - No new files found
+2025-12-11 23:40:48 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:40:48 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:40:48 - __main__ - INFO - No new files found
+2025-12-11 23:40:58 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:41:01 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:41:01 - __main__ - INFO - No new files found
+2025-12-11 23:41:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:41:11 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:41:11 - __main__ - INFO - No new files found
+2025-12-11 23:41:21 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:41:21 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:41:21 - __main__ - INFO - No new files found
+2025-12-11 23:41:31 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:41:33 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:41:33 - __main__ - INFO - No new files found
+2025-12-11 23:41:43 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:41:43 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:41:43 - __main__ - INFO - No new files found
+2025-12-11 23:41:53 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:41:53 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:41:53 - __main__ - INFO - No new files found
+2025-12-11 23:42:03 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:42:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:42:06 - __main__ - INFO - No new files found
+2025-12-11 23:42:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:42:16 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:42:16 - __main__ - INFO - No new files found
+2025-12-11 23:42:26 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:42:26 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:42:26 - __main__ - INFO - No new files found
+2025-12-11 23:42:36 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:42:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:42:39 - __main__ - INFO - No new files found
+2025-12-11 23:42:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:42:49 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:42:49 - __main__ - INFO - No new files found
+2025-12-11 23:42:59 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:42:59 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:42:59 - __main__ - INFO - No new files found
+2025-12-11 23:43:09 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:43:12 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:43:12 - __main__ - INFO - No new files found
+2025-12-11 23:43:22 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:43:22 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:43:22 - __main__ - INFO - No new files found
+2025-12-11 23:43:32 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:43:32 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:43:32 - __main__ - INFO - No new files found
+2025-12-11 23:43:42 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:43:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:43:44 - __main__ - INFO - No new files found
+2025-12-11 23:43:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:43:54 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:43:54 - __main__ - INFO - No new files found
+2025-12-11 23:44:04 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:44:04 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:44:04 - __main__ - INFO - No new files found
+2025-12-11 23:44:14 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:44:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:44:17 - __main__ - INFO - No new files found
+2025-12-11 23:44:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:44:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:44:27 - __main__ - INFO - No new files found
+2025-12-11 23:44:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:44:37 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:44:37 - __main__ - INFO - No new files found
+2025-12-11 23:44:47 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:44:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:44:50 - __main__ - INFO - No new files found
+2025-12-11 23:45:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:45:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:45:00 - __main__ - INFO - No new files found
+2025-12-11 23:45:10 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:45:10 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:45:10 - __main__ - INFO - No new files found
+2025-12-11 23:45:20 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:45:22 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:45:22 - __main__ - INFO - No new files found
+2025-12-11 23:45:32 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:45:32 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:45:32 - __main__ - INFO - No new files found
+2025-12-11 23:45:42 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:45:42 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:45:42 - __main__ - INFO - No new files found
+2025-12-11 23:45:52 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:45:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:45:55 - __main__ - INFO - No new files found
+2025-12-11 23:46:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:46:05 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:46:05 - __main__ - INFO - No new files found
+2025-12-11 23:46:15 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:46:15 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:46:15 - __main__ - INFO - No new files found
+2025-12-11 23:46:25 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:46:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:46:28 - __main__ - INFO - No new files found
+2025-12-11 23:46:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:46:38 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:46:38 - __main__ - INFO - No new files found
+2025-12-11 23:46:48 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:46:48 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:46:48 - __main__ - INFO - No new files found
+2025-12-11 23:46:58 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:47:01 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:47:01 - __main__ - INFO - No new files found
+2025-12-11 23:47:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:47:11 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:47:11 - __main__ - INFO - No new files found
+2025-12-11 23:47:21 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:47:21 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:47:21 - __main__ - INFO - No new files found
+2025-12-11 23:47:31 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:47:33 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:47:33 - __main__ - INFO - No new files found
+2025-12-11 23:47:43 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:47:43 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:47:43 - __main__ - INFO - No new files found
+2025-12-11 23:47:53 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:47:53 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:47:53 - __main__ - INFO - No new files found
+2025-12-11 23:48:03 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:48:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:48:06 - __main__ - INFO - No new files found
+2025-12-11 23:48:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:48:16 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:48:16 - __main__ - INFO - No new files found
+2025-12-11 23:48:26 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:48:26 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:48:26 - __main__ - INFO - No new files found
+2025-12-11 23:48:36 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:48:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:48:39 - __main__ - INFO - No new files found
+2025-12-11 23:48:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:48:49 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:48:49 - __main__ - INFO - No new files found
+2025-12-11 23:48:59 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:48:59 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:48:59 - __main__ - INFO - No new files found
+2025-12-11 23:49:09 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:49:11 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:49:11 - __main__ - INFO - No new files found
+2025-12-11 23:49:21 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:49:21 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:49:21 - __main__ - INFO - No new files found
+2025-12-11 23:49:31 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:49:31 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:49:31 - __main__ - INFO - No new files found
+2025-12-11 23:49:41 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:49:44 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:49:44 - __main__ - INFO - No new files found
+2025-12-11 23:49:54 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:49:54 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:49:54 - __main__ - INFO - No new files found
+2025-12-11 23:50:04 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:50:04 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:50:04 - __main__ - INFO - No new files found
+2025-12-11 23:50:14 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:50:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:50:17 - __main__ - INFO - No new files found
+2025-12-11 23:50:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:50:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:50:27 - __main__ - INFO - No new files found
+2025-12-11 23:50:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:50:37 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:50:37 - __main__ - INFO - No new files found
+2025-12-11 23:50:47 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:50:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:50:50 - __main__ - INFO - No new files found
+2025-12-11 23:51:00 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:51:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:51:00 - __main__ - INFO - No new files found
+2025-12-11 23:51:10 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:51:10 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:51:10 - __main__ - INFO - No new files found
+2025-12-11 23:51:20 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:51:22 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:51:22 - __main__ - INFO - No new files found
+2025-12-11 23:51:32 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:51:32 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:51:32 - __main__ - INFO - No new files found
+2025-12-11 23:51:42 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:51:42 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:51:42 - __main__ - INFO - No new files found
+2025-12-11 23:51:52 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:51:55 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:51:55 - __main__ - INFO - No new files found
+2025-12-11 23:52:05 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:52:05 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:52:05 - __main__ - INFO - No new files found
+2025-12-11 23:52:15 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:52:15 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:52:15 - __main__ - INFO - No new files found
+2025-12-11 23:52:25 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:52:28 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:52:28 - __main__ - INFO - No new files found
+2025-12-11 23:52:38 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:52:38 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:52:38 - __main__ - INFO - No new files found
+2025-12-11 23:52:48 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:52:48 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:52:48 - __main__ - INFO - No new files found
+2025-12-11 23:52:58 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:53:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:53:00 - __main__ - INFO - No new files found
+2025-12-11 23:53:11 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:53:11 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:53:11 - __main__ - INFO - No new files found
+2025-12-11 23:53:21 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:53:21 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:53:21 - __main__ - INFO - No new files found
+2025-12-11 23:53:31 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:53:33 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:53:33 - __main__ - INFO - No new files found
+2025-12-11 23:53:43 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:53:43 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:53:43 - __main__ - INFO - No new files found
+2025-12-11 23:53:53 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:53:53 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:53:53 - __main__ - INFO - No new files found
+2025-12-11 23:54:03 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:54:06 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:54:06 - __main__ - INFO - No new files found
+2025-12-11 23:54:16 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:54:16 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:54:16 - __main__ - INFO - No new files found
+2025-12-11 23:54:26 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:54:26 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:54:26 - __main__ - INFO - No new files found
+2025-12-11 23:54:36 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:54:39 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:54:39 - __main__ - INFO - No new files found
+2025-12-11 23:54:49 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:54:49 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:54:49 - __main__ - INFO - No new files found
+2025-12-11 23:54:59 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:54:59 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:54:59 - __main__ - INFO - No new files found
+2025-12-11 23:55:09 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:55:09 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:55:09 - __main__ - INFO - No new files found
+2025-12-11 23:55:19 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:55:21 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:55:21 - __main__ - INFO - No new files found
+2025-12-11 23:55:31 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:55:31 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:55:31 - __main__ - INFO - No new files found
+2025-12-11 23:55:41 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:55:41 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:55:41 - __main__ - INFO - No new files found
+2025-12-11 23:55:51 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:55:54 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:55:54 - __main__ - INFO - No new files found
+2025-12-11 23:56:04 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:56:04 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:56:04 - __main__ - INFO - No new files found
+2025-12-11 23:56:14 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:56:14 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:56:14 - __main__ - INFO - No new files found
+2025-12-11 23:56:24 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:56:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:56:27 - __main__ - INFO - No new files found
+2025-12-11 23:56:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:56:37 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:56:37 - __main__ - INFO - No new files found
+2025-12-11 23:56:47 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:56:47 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:56:47 - __main__ - INFO - No new files found
+2025-12-11 23:56:57 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:57:00 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:57:00 - __main__ - INFO - No new files found
+2025-12-11 23:57:10 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:57:10 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:57:10 - __main__ - INFO - No new files found
+2025-12-11 23:57:20 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:57:20 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:57:20 - __main__ - INFO - No new files found
+2025-12-11 23:57:30 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:57:32 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:57:32 - __main__ - INFO - No new files found
+2025-12-11 23:57:42 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:57:42 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:57:42 - __main__ - INFO - No new files found
+2025-12-11 23:57:52 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:57:52 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:57:52 - __main__ - INFO - No new files found
+2025-12-11 23:58:02 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:58:05 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:58:05 - __main__ - INFO - No new files found
+2025-12-11 23:58:15 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:58:15 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:58:15 - __main__ - INFO - No new files found
+2025-12-11 23:58:25 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:58:25 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:58:25 - __main__ - INFO - No new files found
+2025-12-11 23:58:35 - __main__ - INFO - Received signal 2
+2025-12-11 23:58:35 - __main__ - INFO - 🛑 Stopping automation service...
+2025-12-11 23:58:35 - app.Automation.scheduler - INFO - [X]--> Scheduler stopped
+2025-12-11 23:58:35 - __main__ - INFO - ✅ Automation service stopped
+2025-12-11 23:58:35 - apscheduler.scheduler - INFO - Scheduler has been shut down
+2025-12-11 23:59:13 - root - INFO - ================================================================================
+2025-12-11 23:59:13 - root - INFO - Logging system initialized - Level: INFO
+2025-12-11 23:59:13 - root - INFO - Logs directory: C:\Users\Asithandile\Downloads\dhl-tracking-system\data\logs
+2025-12-11 23:59:13 - root - INFO - App Log: data\logs\app.log
+2025-12-11 23:59:13 - root - INFO - Automation Log: data\logs\automation.log
+2025-12-11 23:59:13 - root - INFO - Error Log: data\logs\errors.log
+2025-12-11 23:59:13 - root - INFO - Scheduler Log: data\logs\scheduler.log
+2025-12-11 23:59:13 - root - INFO - ================================================================================
+2025-12-11 23:59:13 - __main__ - INFO - Configuration loaded from ./config/automation_config.yaml
+2025-12-11 23:59:13 - app.Automation.file_watcher - INFO - --> Folder accessible: Local Inbox -> data\inbox
+2025-12-11 23:59:15 - app.Automation.file_watcher - ERROR - X-> Error accessing DHL Production Server: [WinError 53] The network path was not found: '\\\\soj3serv07\\Production To Office\\'
+2025-12-11 23:59:15 - app.Automation.file_watcher - INFO - File Watcher initialized
+2025-12-11 23:59:15 - app.Automation.file_watcher - INFO - Monitoring 2 inbox folder(s)
+2025-12-11 23:59:15 - app.Automation.file_watcher - INFO - Processed: data\processed
+2025-12-11 23:59:15 - app.Automation.file_watcher - INFO - Failed: data\failed
+2025-12-11 23:59:15 - app.Automation.scheduler - INFO - Automation Scheduler initialized
+2025-12-11 23:59:15 - __main__ - INFO - :) Automation Service initialized
+2025-12-11 23:59:15 - __main__ - INFO - ============================================================
+2025-12-11 23:59:15 - __main__ - INFO - --> Starting DHL Tracking Automation Service
+2025-12-11 23:59:15 - __main__ - INFO - ============================================================
+2025-12-11 23:59:15 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-11 23:59:15 - app.Automation.scheduler - INFO - Scheduled task 'daily_file_scan' at 09:00 daily
+2025-12-11 23:59:15 - apscheduler.scheduler - INFO - Added job "daily_file_scan" to job store "default"
+2025-12-11 23:59:15 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-11 23:59:15 - app.Automation.scheduler - INFO - --> Scheduler started
+2025-12-11 23:59:15 - app.Automation.scheduler - INFO - Next run for 'daily_file_scan': 2025-12-12 09:00:00+02:00
+2025-12-11 23:59:15 - __main__ - INFO - 📅 Scheduled daily scan at 09:00
+2025-12-11 23:59:15 - __main__ - INFO - 📄 Auto-reports enabled (PDF format)
+2025-12-11 23:59:15 - __main__ - INFO - ⚡ Immediate processing enabled
+2025-12-11 23:59:15 - __main__ - INFO - 👁️ File watcher started (checking every 10 seconds)
+2025-12-11 23:59:15 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:59:17 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:59:17 - __main__ - INFO - Found 1 new file(s)
+2025-12-11 23:59:17 - __main__ - INFO - Processing file: waybills.csv (from: Local Inbox)
+2025-12-11 23:59:17 - app.core.file_processor - INFO - File saved: ./data/uploads\upload_20251211_235917.csv
+2025-12-11 23:59:17 - app.core.file_processor - INFO - No binID column found, all binIDs will be None
+2025-12-11 23:59:17 - app.core.file_processor - INFO - Extracted 4 tracking records from CSV
+2025-12-11 23:59:17 - app.core.file_processor - INFO - Cleaned up file: ./data/uploads\upload_20251211_235917.csv
+2025-12-11 23:59:17 - __main__ - INFO - Extracted 4 records from waybills.csv
+2025-12-11 23:59:17 - app.core.batch_processor - ERROR - Batch processing error: (sqlite3.OperationalError) no such table: api_usage
+[SQL: SELECT api_usage.id AS api_usage_id, api_usage.date AS api_usage_date, api_usage.request_count AS api_usage_request_count, api_usage.successful_requests AS api_usage_successful_requests, api_usage.failed_requests AS api_usage_failed_requests, api_usage.created_at AS api_usage_created_at, api_usage.updated_at AS api_usage_updated_at 
+FROM api_usage 
+WHERE api_usage.date = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('2025-12-11', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-12-11 23:59:17 - __main__ - INFO - Processing complete: 0 successful, 4 failed
+2025-12-11 23:59:17 - app.Automation.file_watcher - INFO - Moved to processed: waybills.csv -> Local_Inbox_waybills_20251211_235917.csv
+2025-12-11 23:59:17 - __main__ - INFO - 📄 Generating automatic report for 4 records...
+2025-12-11 23:59:17 - __main__ - ERROR - Error generating report: (sqlite3.OperationalError) no such table: tracking_records
+[SQL: SELECT tracking_records.id AS tracking_records_id, tracking_records.tracking_number AS tracking_records_tracking_number, tracking_records.bin_id AS tracking_records_bin_id, tracking_records.status_code AS tracking_records_status_code, tracking_records.status AS tracking_records_status, tracking_records.origin AS tracking_records_origin, tracking_records.destination AS tracking_records_destination, tracking_records.tracking_details AS tracking_records_tracking_details, tracking_records.batch_id AS tracking_records_batch_id, tracking_records.is_successful AS tracking_records_is_successful, tracking_records.error_message AS tracking_records_error_message, tracking_records.created_at AS tracking_records_created_at, tracking_records.updated_at AS tracking_records_updated_at, tracking_records.last_checked AS tracking_records_last_checked 
+FROM tracking_records 
+WHERE tracking_records.tracking_number IN (?, ?, ?, ?)]
+[parameters: ('1621160925', '2906450470', '9545652756', '5196705570')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-12-11 23:59:17 - __main__ - INFO - ✅ Scan and process complete
+2025-12-11 23:59:27 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:59:27 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:59:27 - __main__ - INFO - No new files found
+2025-12-11 23:59:37 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:59:37 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:59:37 - __main__ - INFO - No new files found
+2025-12-11 23:59:47 - __main__ - INFO -  ... Scanning all inbox folders for new files...
+2025-12-11 23:59:50 - app.Automation.file_watcher - WARNING - Folder not found: DHL Production Server
+2025-12-11 23:59:50 - __main__ - INFO - No new files found
