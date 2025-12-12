@@ -49,10 +49,13 @@ class Settings(BaseSettings):
     # Email settings
     SMTP_SERVER: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USERNAME: str
-    SMTP_PASSWORD: str
-    EMAIL_FROM: str
-    EMAIL_TO: str
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = ""
+    EMAIL_TO: str = ""
+    
+    # BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    # ENV_PATH = os.path.join(BASE_DIR, ".env")
     
     class Config:
         env_file = ".env" #or env_file = ".env.example"
