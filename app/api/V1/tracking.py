@@ -208,6 +208,23 @@ async def upload_and_track(
             tracking_repo,
             api_usage_repo
         )
+        # →→→ NEW: Auto-generate PDF + send email ←←←
+        from app.core.export_services import export_service
+        from app.utils.email_service import EmailService
+
+        # Get full records from DB (with fresh data)
+        waybills = [w for w, _ in tracking_data]
+        records = tracking_repo.get_multiple(waybills)
+
+        if records:
+            pdf_path = export_service.generate_pdf(records, include_details=True)
+            logger.info(f"Auto-generated PDF: {pdf_path}")
+
+            # Auto-send email
+            EmailService().send_report(pdf_path, source_file=file.filename)
+
+            # Optional: save to exports table
+            #background_tasks.add_task(export_service.cleanup_old_exports, days=7)
         
         return BulkTrackingResponse(
             total_requested=results["total_requested"],
@@ -272,9 +289,14 @@ async def export_tracking_data(
                     tracking_repo.update(waybill, {'bin_id': bin_id})
                     record.bin_id = bin_id
         
+        from app.utils.email_service import EmailService
+
+        email_service = EmailService()
+
         # Generate export
         if request.format.value == "pdf":
             file_path = export_service.generate_pdf(records, request.include_details)
+            email_service.send_report(file_path)  # ← Auto email!
         else:
             file_path = export_service.generate_docx(records, request.include_details)
         

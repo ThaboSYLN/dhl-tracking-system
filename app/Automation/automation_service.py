@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional, List, Tuple
 from datetime import datetime
+from app.utils.email_service import EmailService
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -152,13 +153,15 @@ class AutomationService:
                 
                 logger.info(f"[:)] Report generated: {Path(file_path).name}")
                 logger.info(f"<-> Saved to: {file_path}")
-                
+
+                EmailService().send_report(file_path, source_file)
+              
                 return file_path
                 
         except Exception as e:
             logger.error(f"Error generating report: {e}")
             return None
-    
+            
     async def process_file(
         self, 
         file_path: Path, 
@@ -250,7 +253,11 @@ class AutomationService:
             for file_path, source_folder in new_files:
                 await self.process_file(file_path, source_folder)
             
-            logger.info("✅ Scan and process complete")
+
+            logger.info(f"SMTP_USER: {settings.SMTP_USERNAME}")
+            logger.info(f"SMTP_PASS: {settings.SMTP_PASSWORD}")
+            logger.info(f"EMAIL_TO: {settings.EMAIL_TO}")
+            logger.info(f"Enabled: {EmailService().enabled}")
             
         except Exception as e:
             logger.error(f"Error in scan_and_process: {e}")

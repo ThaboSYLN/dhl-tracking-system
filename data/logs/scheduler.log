@@ -1,0 +1,16 @@
+2025-12-12 10:55:15 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-12 10:55:15 - apscheduler.scheduler - INFO - Added job "daily_file_scan" to job store "default"
+2025-12-12 10:55:15 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-12 11:17:39 - apscheduler.scheduler - INFO - Scheduler has been shut down
+2025-12-12 11:36:35 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-12 11:36:35 - apscheduler.scheduler - INFO - Added job "daily_file_scan" to job store "default"
+2025-12-12 11:36:35 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-12 11:38:50 - apscheduler.scheduler - INFO - Scheduler has been shut down
+2025-12-12 14:00:50 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-12 14:00:50 - apscheduler.scheduler - INFO - Added job "daily_file_scan" to job store "default"
+2025-12-12 14:00:50 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-12 14:01:57 - apscheduler.scheduler - INFO - Scheduler has been shut down
+2025-12-12 14:09:10 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-12 14:09:10 - apscheduler.scheduler - INFO - Added job "daily_file_scan" to job store "default"
+2025-12-12 14:09:10 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-12 14:14:48 - apscheduler.scheduler - INFO - Scheduler has been shut down
