@@ -1,72 +1,94 @@
 """
 Application runner script
-Provides easy startup and management commands
+Starts FastAPI + Automation Service together
 """
+
 import uvicorn
 import sys
 import os
+import threading
+import time
+import signal
 
+# -------------------------------------------------
 # Add project root to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# -------------------------------------------------
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, PROJECT_ROOT)
 
 from app.utils.config import settings
 
 
-def main():
-    """Run the FastAPI application"""
+# -------------------------------------------------
+# Automation Service Runner
+# -------------------------------------------------
+def start_automation():
+    """
+    Start the automation service in a background thread
+    """
+    try:
+        from app.Automation.automation_service import main as automation_main
+        print("🤖 Starting Automation Service...")
+        automation_main()
+    except Exception as e:
+        print(f"❌ Automation Service failed to start: {e}")
+
+
+# -------------------------------------------------
+# FastAPI Runner
+# -------------------------------------------------
+def start_api():
+    """
+    Start FastAPI (blocking)
+    """
     print("=" * 60)
     print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     print("=" * 60)
     print(f"📍 Host: {settings.HOST}")
     print(f"📍 Port: {settings.PORT}")
-    print(f"📚 Documentation: http://{settings.HOST}:{settings.PORT}/docs")
-    print(f"📊 Health Check: http://{settings.HOST}:{settings.PORT}/health")
+    print(f"📚 Docs: http://{settings.HOST}:{settings.PORT}/docs")
+    print(f"📊 Health: http://{settings.HOST}:{settings.PORT}/health")
     print("=" * 60)
     print()
-    
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=settings.DEBUG,
+        reload=False,  # IMPORTANT: keep False to avoid double automation
         log_level=settings.LOG_LEVEL.lower()
     )
 
 
-def init_db():
-    """Initialize database"""
-    from app.utils.database import init_db
-    print("🗄️  Initializing database...")
-    init_db()
-    print("✅ Database initialized successfully!")
+# -------------------------------------------------
+# Graceful Shutdown Handler
+# -------------------------------------------------
+def shutdown_handler(signum, frame):
+    print("\n🛑 Shutdown signal received. Stopping services...")
+    sys.exit(0)
 
 
-def reset_db():
-    """Reset database (CAUTION: Deletes all data)"""
-    from app.utils.database import db_manager
-    
-    response = input("⚠️  WARNING: This will delete all data! Are you sure? (yes/no): ")
-    if response.lower() == 'yes':
-        print("🔄 Resetting database...")
-        db_manager.reset_database()
-        print("✅ Database reset successfully!")
-    else:
-        print("❌ Operation cancelled")
+# -------------------------------------------------
+# Main Entry Point
+# -------------------------------------------------
+def main():
+    # Handle CTRL+C and termination
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+
+    # Start automation in background thread
+    automation_thread = threading.Thread(
+        target=start_automation,
+        daemon=True  # Dies automatically when main process exits
+    )
+    automation_thread.start()
+
+    # Small delay so automation initializes cleanly
+    time.sleep(1)
+
+    # Start FastAPI (this blocks)
+    start_api()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        command = sys.argv[1]
-        
-        if command == "init-db":
-            init_db()
-        elif command == "reset-db":
-            reset_db()
-        elif command == "run":
-            main()
-        else:
-            print(f"Unknown command: {command}")
-            print("Available commands: run, init-db, reset-db")
-    else:
-        main()
-
+    main()

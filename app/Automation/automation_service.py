@@ -47,8 +47,16 @@ class AutomationService:
         self.batch_processor = BatchProcessor(dhl_service)
         
         # Setup signal handlers
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # signal.signal(signal.SIGINT, self._signal_handler)
+        # signal.signal(signal.SIGTERM, self._signal_handler)
+
+        import threading
+
+        # Setup signal handlers ONLY in main thread
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, self._signal_handler)
+            signal.signal(signal.SIGTERM, self._signal_handler)
+
         
         logger.info(":) Automation Service initialized")
     

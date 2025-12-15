@@ -39,7 +39,7 @@ class EmailService:
         body = "Hi team,\n\nA new tracking file has been processed.\n"
         if source_file:
             body += f"Source file: {source_file}\n"
-        body += "\nThe following waybills have been validated proceed to close the relevant bins.\n\nPlease find the full report attached.\n\nBest Regards \nPre-Prod Team."
+        body += "\nThe following waybills have been validated, proceed to close the relevant bins.\n\nPlease find the full report attached.\n\nBest Regards \nPre-Prod Team."
 
         msg = MIMEMultipart()
         msg["From"] = settings.EMAIL_FROM
