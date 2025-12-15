@@ -37,8 +37,10 @@ flake8==7.0.0
 mypy==1.8.0
 
 #db Driver for deployment
-psycopg2-binary==2.9.9
+psycopg2-binary
 aiofiles==23.2.1
 
 apscheduler==3.10.4
 pyYAML==6.0.1
+#psystem-certs  === pip install pip-system-certs 
+pip-system-certs 
