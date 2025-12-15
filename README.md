@@ -2,9 +2,9 @@
   - Create a virtual environment
       - `py -3.12 -m venv venv`
   - Navigate to the virtual environment
-      - venv\Scripts\activate
+      - `venv\Scripts\activate`
   - Run the automation process
-      - python -m app.Automation.automation_service
+      - `python -m app.Automation.automation_service`
   - Run the live server
-      - uvicorn app.main:app --reload
+      - `uvicorn app.main:app --reload`
  
