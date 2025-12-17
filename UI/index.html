@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/style.css"/>
+    <title>DHL Tracking System</title>
+</head>
+<body>
+    <h2>DHL Tracking</h2>
+    <form id="file-upload">
+        <div>
+            <label id="upload-label">Upload a file</label><br>
+            <input type="file" accept=".csv, .xlsx, .xls">
+            <button>Send</button>
+        </div>
+        
+        <div>
+            <label id="trigger-label">Trigger Automation</label>
+            <button>Start</button>
+        </div>
+
+        <div>
+            <label id="trigger-label">Report History</label>
+            <input type="text" placeholder="batch_id" id="batch-id">
+            <br>
+            <br>
+            <button>Get Report</button>
+            
+        </div>
+    </form>
+    
+</body>
+</html>
