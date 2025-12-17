@@ -18,6 +18,7 @@ from app.core.dhl_services import dhl_service
 from app.core.export_services import export_service
 from app.repositories import TrackingRepository, APIUsageRepository, ExportRepository
 from app.utils.database import get_db_context
+from app.core.export_cleanup_service import export_cleanup_service
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,7 @@ async def run_automation_scan(db: Session) -> dict:
         batch_processor = BatchProcessor(dhl_service)
         
         # Get new files from all folders
-        logger.info("🔍 API Trigger: Scanning inbox folders...")
+        logger.info("[search...]>API Trigger: Scanning inbox folders...")
         new_files = file_watcher.get_new_files()
         
         results["files_found"] = len(new_files)
@@ -327,5 +328,69 @@ async def get_automation_status(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting automation status: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")
+    
 
+
+@router.post("/export/cleanup", summary="Trigger Export Cleanup")
+async def trigger_export_cleanup():
+    """
+    Manually trigger export cleanup process
+    
+    **What it does:**
+    - Moves exports older than 3 days to network archive
+    - Deletes archived files older than 30 days
+    
+    **Use when:**
+    - Want to clean up immediately (don't wait for 2 AM schedule)
+    - Testing cleanup functionality
+    - Manual maintenance
+    """
+    try:
+        logger.info("Manual export cleanup triggered via API")
+        stats = export_cleanup_service.cleanup_exports()
+        
+        return {
+            "success": True,
+            "message": "Export cleanup completed",
+            "files_archived": stats["files_archived"],
+            "files_deleted": stats["files_deleted"],
+            "active_files_remaining": stats["active_files"],
+            "errors": stats["errors"]
+        }
+    except Exception as e:
+        logger.error(f"Error in manual cleanup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/export/status", summary="Get Export Cleanup Status")
+async def get_export_status():
+    """
+    Get current status of export files and archiving
+    
+    **Returns:**
+    - Active files (< 3 days old)
+    - Archived files (in network archive)
+    - File counts and sizes
+    - Network availability status
+    """
+    try:
+        status = export_cleanup_service.get_cleanup_status()
+        return {
+            "success": True,
+            "network_archive_available": status["network_available"],
+            "active_files": {
+                "count": status["active_count"],
+                "total_size_mb": status["active_size_mb"],
+                "files": status["active_files"][:10]  # First 10 files
+            },
+            "archived_files": {
+                "count": status["archived_count"],
+                "total_size_mb": status["archived_size_mb"],
+                "files": status["archived_files"][:10]  # First 10 files
+            }
+        }
+    except Exception as e:
+       # logger(f"Error getting export status: {e}")
+        logger.error(f"Error getting export status:{e}")
+        raise HTTPException(status_code=500, detail=str(e))
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 from datetime import datetime
 from app.utils.email_service import EmailService
+from app.core.export_cleanup_service import export_cleanup_service
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -31,7 +32,16 @@ class AutomationService:
     """
     Main automation service with network support and auto-reports
     """
-    
+    async def _run_export_cleanup(self):
+
+        """Run export cleanup"""
+        try:
+            logger.info("Running scheduled export cleanup...")
+            stats = export_cleanup_service.cleanup_exports()
+            logger.info(f"cleanup completed:{stats['files_archived,']}  aechived, {stats['files_deleted']}  deleted")
+        except Exception as e:
+            logger.error(f"Error in scheduled cleanup:{e}")    
+   
     def __init__(self, config_path: str = "./config/automation_config.yaml"):
         self.config = self._load_config(config_path)
         self.is_running = False
@@ -286,6 +296,13 @@ class AutomationService:
                 await asyncio.sleep(watch_interval)
     
     async def run_async(self):
+        self.scheduler.add_daily_task(
+            self._run_export_cleanup,
+            hour=2,# for testing we can change it to the nearest time   12
+            minute=0,
+            task_name="export_cleanup")
+        
+        logger.info(f"<-> Scheduled export cleanup at 2:00")
         """Async main loop"""
         try:
             logger.info("=" * 60)
