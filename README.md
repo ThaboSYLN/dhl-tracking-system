@@ -1,7 +1,7 @@
 # How to run this app locally
   - Clone the repository on your CMD
-      - `git clone 
-  - Create a virtual environment
+      - `git clone https://github.com/ThaboSYLN/dhl-tracking-system.git` 
+  - Navigate to your IDE terminal and create a virtual environment
       - `py -3.12 -m venv venv`
   - Navigate to the virtual environment
       - `venv\Scripts\activate`
