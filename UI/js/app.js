@@ -34,3 +34,58 @@ startAutomation.addEventListener('click', async () => {
         startAutomation.textContent = 'Start';
     }
 });
+
+const uploadBtn = document.getElementById('upload-btn');
+const fileInput = document.getElementById('upload-file');
+
+uploadBtn.addEventListener('click', async () => {
+    if (!fileInput.files.length) {
+        alert('❌ Please select a file first');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file); // MUST match endpoint param name
+
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+
+    try {
+        const response = await fetch('http://127.0.0.1:8000/api/v1/tracking/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+        let data = {};
+
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch {
+            throw new Error('Invalid response from server');
+        }
+
+        if (!response.ok) {
+            throw new Error(data.detail || 'File upload failed');
+        }
+
+        alert(
+            `✅ File processed successfully\n\n` +
+            `Total Requested: ${data.total_requested}\n` +
+            `Successful: ${data.successful}\n` +
+            `Failed: ${data.failed}\n` +
+            `Batch ID: ${data.batch_id}\n` +
+            `Processing Time: ${data.processing_time}s`
+        );
+
+        // Optional: reset input
+        fileInput.value = '';
+
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Send';
+    }
+});
