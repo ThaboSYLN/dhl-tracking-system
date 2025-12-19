@@ -301,7 +301,8 @@ class AutomationService:
             hour=2,# for testing we can change it to the nearest time   12
             minute=0,
             task_name="export_cleanup")
-        
+        #=ROUND((B8/B$8)*100,2)
+        #=ROUND((F3+F7)+1,2)
         logger.info(f"<-> Scheduled export cleanup at 2:00")
         """Async main loop"""
         try:

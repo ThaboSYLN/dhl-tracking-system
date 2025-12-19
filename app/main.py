@@ -30,26 +30,26 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown tasks
     """
     # Startup
-    logger.info("🚀 Starting DHL Tracking System...")
+    logger.info(">> Starting DHL Tracking System...")
     
     # Initialize database
     init_db()
-    logger.info("✅ Database initialized")
+    logger.info(">> Database initialized")
     
     # Test DHL API connection
     api_available = await dhl_service.test_connection()
     if api_available:
-        logger.info("✅ DHL API connection successful")
+        logger.info(">YES> DHL API connection successful")
     else:
-        logger.warning("⚠️ DHL API connection failed - check API key")
+        logger.warning(">NO> DHL API connection failed - check API key")
     
-    logger.info(f"🌐 API running at {settings.HOST}:{settings.PORT}")
-    logger.info(f"📚 Documentation available at http://{settings.HOST}:{settings.PORT}/docs")
+    logger.info(f"[Host--] API running at {settings.HOST}:{settings.PORT}")
+    logger.info(f">>Documentation available at http://{settings.HOST}:{settings.PORT}/docs")
     
     yield
     
     # Shutdown
-    logger.info("👋 Shutting down DHL Tracking System...")
+    logger.info("<<--Shutting down DHL Tracking System...")
 
 
 # Create FastAPI application
@@ -62,17 +62,17 @@ app = FastAPI(
     A professional tracking system for DHL shipments with the following features:
     
     ### Features
-    * 🔍 **Single Tracking**: Track individual shipments
-    * 📦 **Bulk Tracking**: Track multiple shipments at once
-    * 📁 **File Upload**: Process CSV/Excel files with tracking numbers
-    * 📄 **Export**: Generate PDF and DOCX reports
-    * 💾 **Smart Caching**: Minimize API calls with intelligent caching
-    * 📊 **Usage Tracking**: Monitor API usage and rate limits
-    * ⚡ **Batch Processing**: Intelligent batching for optimal performance
+    * [Search...] **Single Tracking**: Track individual shipments
+    * [BigBox] **Bulk Tracking**: Track multiple shipments at once
+    * [File] **File Upload**: Process CSV/Excel files with tracking numbers
+    * >> **Export**: Generate PDF and DOCX reports
+    * **Smart Caching**: Minimize API calls with intelligent caching
+    * >>**Usage Tracking**: Monitor API usage and rate limits
+    * **Batch Processing**: Intelligent batching for optimal performance
     
     ### Rate Limits
     - DHL API: 250 requests per day
-    - Batch size: 25 tracking numbers per batch
+    - Batch size: 5 tracking numbers per batch
     - Smart caching: Reuses data less than 1 hour old
     
     ### Getting Started
@@ -82,7 +82,7 @@ app = FastAPI(
     4. Use `/api/v1/tracking/upload` for bulk file processing
     
     ### Support
-    For issues or questions, please refer to the documentation.
+    For issues or questions, please refer to the documentation--Not yet set so the Preprod Team will Help.
     """,
     lifespan=lifespan,
     docs_url="/docs",

@@ -28,10 +28,10 @@ def start_automation():
     """
     try:
         from app.Automation.automation_service import main as automation_main
-        print("🤖 Starting Automation Service...")
+        print("[>|<] Starting Automation Service...")
         automation_main()
     except Exception as e:
-        print(f"❌ Automation Service failed to start: {e}")
+        print(f"[X] Automation Service failed to start: {e}")
 
 
 # -------------------------------------------------
@@ -42,10 +42,10 @@ def start_api():
     Start FastAPI (blocking)
     """
     print("=" * 60)
-    print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    print(f">>Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     print("=" * 60)
-    print(f"📍 Host: {settings.HOST}")
-    print(f"📍 Port: {settings.PORT}")
+    print(f">> Host: {settings.HOST}")
+    print(f">>Port: {settings.PORT}")
     print(f"📚 Docs: http://{settings.HOST}:{settings.PORT}/docs")
     print(f"📊 Health: http://{settings.HOST}:{settings.PORT}/health")
     print("=" * 60)
@@ -64,7 +64,7 @@ def start_api():
 # Graceful Shutdown Handler
 # -------------------------------------------------
 def shutdown_handler(signum, frame):
-    print("\n🛑 Shutdown signal received. Stopping services...")
+    print("\n[>X<] Shutdown signal received. Stopping services...")
     sys.exit(0)
 
 
