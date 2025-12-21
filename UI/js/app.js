@@ -79,6 +79,16 @@ uploadBtn.addEventListener('click', async () => {
             `Processing Time: ${data.processing_time}s`
         );
 
+         // Auto-download the generated PDF
+        if (data.filename) {
+            const downloadUrl = `http://127.0.0.1:8000/api/v1/tracking/download/${encodeURIComponent(data.filename)}`;
+            window.open(downloadUrl, '_blank');  // ← Opens in new tab
+
+            
+        } else {
+            console.warn('No PDF filename returned – auto-download skipped');
+        }
+
         // Optional: reset input
         fileInput.value = '';
 
@@ -86,6 +96,6 @@ uploadBtn.addEventListener('click', async () => {
         alert(`❌ ${error.message}`);
     } finally {
         uploadBtn.disabled = false;
-        uploadBtn.textContent = 'Send';
+        uploadBtn.textContent = 'Upload';
     }
 });
