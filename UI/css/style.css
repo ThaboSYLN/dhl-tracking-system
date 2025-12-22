@@ -23,11 +23,10 @@ header {
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-/* #file-upload{
+.container{
     display: flex;
-    padding: 2vh;
     justify-content: center;
-} */
+}
 form{
     display: flex;
     flex-direction: column;
@@ -35,6 +34,7 @@ form{
     margin-left: 2vw;
     gap: 10vh;
     margin-top: 4vh;
+    width: 100%;
 }
 button{
     background-color: black;
@@ -59,10 +59,66 @@ button:hover{
     text-align: center;
     height: 5vh;
 }
+#single-track{
+    width: 12vw;
+    text-align: center;
+    height: 5vh;
+}
+#track-single-btn{
+    margin-left: 8vw;
+}
 #borders{
     border: 1px solid;
     height: 19vh;
     width: 60%;
     padding: 2vh;
     
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.result-row:last-child {
+    border-bottom: none;
+}
+
+.result-label {
+    font-weight: 600;
+    color: #555;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    text-transform: capitalize;
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    font-size: 6vh;
+    cursor: pointer;
+    color: red;
+    padding: 0;
+    line-height: 2;
+    overflow-y: hidden;
+}
+
+.close-btn:hover {
+    color: #000;
 }

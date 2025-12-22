@@ -2,6 +2,7 @@
 FastAPI endpoints for DHL tracking system
 FINAL VERSION - Simple text area input
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks,Query,Path
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -50,9 +51,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tracking", tags=["Tracking"])
 batch_processor = BatchProcessor(dhl_service)
-
-
-
 
 @router.get("/single/{tracking_number}", response_model=TrackingResponse, summary="Track Single Shipment")
 async def track_single_shipment(
@@ -108,11 +106,6 @@ async def track_single_shipment(
     except Exception as e:
         logger.error(f"Error tracking single shipment: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-
-
-
-
 
 @router.post("/bulk", response_model=BulkTrackingResponse, summary="Track Multiple Shipments")
 async def track_bulk_shipments(
@@ -225,14 +218,15 @@ async def upload_and_track(
 
             # Optional: save to exports table
             #background_tasks.add_task(export_service.cleanup_old_exports, days=7)
-        
+
         return BulkTrackingResponse(
             total_requested=results["total_requested"],
             successful=results["successful"],
             failed=results["failed"],
             results=results["results"],
             batch_id=results.get("batch_ids", [None])[0],
-            processing_time=results["processing_time"]
+            processing_time=results["processing_time"],
+            filename=os.path.basename(pdf_path)  # ← ADD THIS: just the filename, not full path 
         )
         
     except HTTPException:

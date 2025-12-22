@@ -9,7 +9,16 @@
 </head>
 <body>
     <h2>DHL Tracking</h2>
+    <div class="container">
     <form id="file-upload">
+        <div id="borders">
+            <label id="upload-label">Track Single</label><br>
+            <input type="text" placeholder="waybill number" id="single-track">
+            <button id="track-single-btn" type="button">Track</button>
+        </div>
+
+            <div id="tracking-result" class="card" style="display: none;"></div>
+
         <div id="borders">
             <label id="upload-label">Upload a file</label><br>
             <input id="upload-file" type="file" accept=".csv, .xlsx, .xls">
@@ -30,6 +39,6 @@
             
         </div>
     </form>
-    
+    </div>
 </body>
 </html>
