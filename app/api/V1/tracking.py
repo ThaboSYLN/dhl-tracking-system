@@ -6,8 +6,8 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks,Query,Path
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import List
-import logging
+from typing import List, Optional, Any
+import logging, os
 from pydantic import BaseModel
 
 
@@ -227,6 +227,9 @@ async def upload_and_track(
             batch_id=results.get("batch_ids", [None])[0],
             processing_time=results["processing_time"],
             filename=os.path.basename(pdf_path)  # ← ADD THIS: just the filename, not full path 
+            processing_time=results["processing_time"],
+            filename=os.path.basename(pdf_path)  # ← ADD THIS: just the filename, not full path
+
         )
         
     except HTTPException:

@@ -172,5 +172,6 @@ uploadBtn.addEventListener('click', async (event) => {
     } finally {
         uploadBtn.disabled = false;
         uploadBtn.textContent = 'Upload';
+        uploadBtn.textContent = 'Upload';
     }
 });

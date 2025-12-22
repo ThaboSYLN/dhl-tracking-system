@@ -177,6 +177,8 @@ class BulkTrackingResponse(BaseModel):
     batch_id: Optional[str] = None
     processing_time: Optional[float] = None
     filename: Optional[str] = None
+    filename: Optional[str] = None  # ← ADD THIS
+
     
     class Config:
         json_schema_extra = {
