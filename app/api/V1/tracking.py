@@ -227,8 +227,6 @@ async def upload_and_track(
             batch_id=results.get("batch_ids", [None])[0],
             processing_time=results["processing_time"],
             filename=os.path.basename(pdf_path)  # ← ADD THIS: just the filename, not full path 
-            processing_time=results["processing_time"],
-            filename=os.path.basename(pdf_path)  # ← ADD THIS: just the filename, not full path
 
         )
         
