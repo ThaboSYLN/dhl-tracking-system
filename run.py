@@ -9,6 +9,8 @@ import os
 import threading
 import time
 import signal
+import webbrowser
+
 
 # -------------------------------------------------
 # Add project root to Python path
@@ -82,6 +84,10 @@ def main():
         daemon=True  # Dies automatically when main process exits
     )
     automation_thread.start()
+
+
+    # Open browser after short delay
+    threading.Timer(2.0, lambda: webbrowser.open("http://127.0.0.1:8000")).start()
 
     # Small delay so automation initializes cleanly
     time.sleep(1)
