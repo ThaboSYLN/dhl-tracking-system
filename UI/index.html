@@ -3,32 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/style.css"/>
     <title>DHL Tracking System</title>
+    <script src="./js/app.js" defer></script>
+    <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-    <h2>DHL Tracking</h2>
-    <form id="file-upload">
-        <div>
-            <label id="upload-label">Upload a file</label><br>
-            <input type="file" accept=".csv, .xlsx, .xls">
-            <button>Send</button>
-        </div>
-        
-        <div>
-            <label id="trigger-label">Trigger Automation</label>
-            <button>Start</button>
+    <div class="header">
+        <h1>🚚 DHL Tracking System</h1>
+    </div>
+
+    <div class="container">
+        <!-- Track Single -->
+        <div class="card">
+            <h2 class="card-title">
+                <span class="icon">📦</span>
+                Track Single Package
+            </h2>
+            <div class="input-group">
+                <input type="text" placeholder="Enter waybill number" id="single-track">
+                <button id="track-single-btn">Track Package</button>
+            </div>
+            <div id="tracking-result" style="display: none;"></div>
         </div>
 
-        <div>
-            <label id="trigger-label">Report History</label>
-            <input type="text" placeholder="batch_id" id="batch-id">
-            <br>
-            <br>
-            <button>Get Report</button>
-            
+        <!-- Upload File -->
+        <div class="card">
+            <h2 class="card-title">
+                <span class="icon">📄</span>
+                Bulk Upload
+            </h2>
+            <div class="input-group">
+                <input id="upload-file" type="file" accept=".csv, .xlsx, .xls">
+                <button id="upload-btn">Upload & Process</button>
+            </div>
         </div>
-    </form>
-    
+
+        <!-- Trigger Automation -->
+        <div class="card automation-card">
+            <h2 class="card-title">
+                <span class="icon">⚡</span>
+                Automation Control
+            </h2>
+            <button id="start-automation">Start Automation</button>
+        </div>
+
+        <!-- Report History -->
+        <div class="card">
+            <h2 class="card-title">
+                <span class="icon">📊</span>
+                Report History
+            </h2>
+            <div class="input-group">
+                <input type="text" placeholder="Enter batch ID" id="batch-id">
+                <button id="get-report">Get Report</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

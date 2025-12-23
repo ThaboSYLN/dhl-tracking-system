@@ -19,6 +19,7 @@ from app.core.export_services import export_service
 from app.repositories import TrackingRepository, APIUsageRepository, ExportRepository
 from app.utils.database import get_db_context
 import yaml
+from app.utils.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,12 @@ async def run_automation_scan(db: Session) -> dict:
                         
                         logger.info(f"--- Report generated: {report_path}")
                         results["reports_generated"] += 1
+
+                        # ✅ SEND EMAIL (THIS WAS MISSING)
+                        EmailService().send_report(
+                            report_path,
+                            source_file=file_path.name
+                        )
                 
             except Exception as e:
                 logger.error(f"Error processing {file_path.name}: {e}")
