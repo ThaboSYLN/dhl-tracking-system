@@ -32,56 +32,38 @@ app = FastAPI(
     A professional tracking system for DHL shipments with the following features:
     
     ### Features
-    * 🔍 **Single Tracking**: Track individual shipments
-    * 📦 **Bulk Tracking**: Track multiple shipments at once
-    * 📁 **File Upload**: Process CSV/Excel files with tracking numbers
-    * 📄 **Export**: Generate PDF and DOCX reports
-    * 💾 **Smart Caching**: Minimize API calls with intelligent caching
-    * 📊 **Usage Tracking**: Monitor API usage and rate limits
-    * ⚡ **Batch Processing**: Intelligent batching for optimal performance
+    * 🔍 **Single Tracking**
+    * 📦 **Bulk Tracking**
+    * 📁 **File Upload**
+    * 📄 **Export Reports**
+    * 💾 **Smart Caching**
+    * 📊 **Usage Tracking**
+    * ⚡ **Batch Processing**
     
-    ### Rate Limits
-    - DHL API: 250 requests per day
-    - Batch size: 25 tracking numbers per batch
-    - Smart caching: Reuses data less than 1 hour old
-    
-    ### Getting Started
-    1. Configure your DHL API key in `.env` file
-    2. Use `/docs` for interactive API documentation
-    3. Start with `/api/v1/tracking/single` for single tracking
-    4. Use `/api/v1/tracking/upload` for bulk file processing
-    
-    ### Support
-    For issues or questions, please refer to the documentation.
     """,
-    #lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 
 # =====================================================================
 # 2. SERVE UI (HTML/CSS/JS)
 # =====================================================================
-
-# Path to UI directory
 UI_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "UI")
 
-# Serve static files under /ui/*
 app.mount("/ui", StaticFiles(directory=UI_DIR), name="ui")
 
-# Serve index.html at root "/"
 @app.get("/")
 def serve_index():
     return FileResponse(os.path.join(UI_DIR, "index.html"))
 
 
 # =====================================================================
-# 3. LOGGING CONFIG
+# 3. LOGGING CONFIG (from email_generator_v2 + your version)
 # =====================================================================
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -93,19 +75,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("🚀 Starting DHL Tracking System...")
 
-    # Initialize DB
-    init_db()
-    logger.info("✅ Database initialized")
+    # DB init
+    try:
+        init_db()
+        logger.info("✅ Database initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize database: {e}")
 
-    # Test DHL connection
+    # DHL API connection test
     api_available = await dhl_service.test_connection()
     if api_available:
         logger.info("✅ DHL API connection successful")
     else:
         logger.warning("⚠️ DHL API connection failed")
-
-    logger.info(f"🌐 API running at {settings.HOST}:{settings.PORT}")
-    logger.info(f"📚 Docs: http://{settings.HOST}:{settings.PORT}/docs")
 
     yield
 
@@ -128,7 +110,7 @@ app.add_middleware(
 
 
 # =====================================================================
-# 6. API ROOT ENDPOINT (MOVED TO /api)
+# 6. API ROOT
 # =====================================================================
 @app.get("/api", tags=["Root"])
 async def api_root(request: Request):
@@ -139,7 +121,7 @@ async def api_root(request: Request):
         "docs": f"{base}/docs",
         "redoc": f"{base}/redoc",
         "health": f"{base}/health",
-        "openapi": f"{base}/openapi.json"
+        "openapi": f"{base}/openapi.json",
     }
 
 
@@ -150,14 +132,16 @@ async def api_root(request: Request):
 async def health_check():
     from app.utils.database import engine
 
+    # DB check
     try:
         with engine.connect() as conn:
             conn.execute("SELECT 1")
         db_ok = True
     except Exception as e:
-        logger.error(f"DB health check failed: {str(e)}")
+        logger.error(f"DB health check failed: {e}")
         db_ok = False
 
+    # DHL API check
     dhl_ok = await dhl_service.test_connection()
 
     status = "healthy" if (db_ok and dhl_ok) else "degraded"
@@ -180,11 +164,11 @@ app.include_router(export.router, prefix=settings.API_V1_PREFIX)
 
 
 # =====================================================================
-# 9. ERROR HANDLER
+# 9. GLOBAL ERROR HANDLER
 # =====================================================================
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={
