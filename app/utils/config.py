@@ -47,12 +47,12 @@ class Settings(BaseSettings):
     LOG_FILE: str = "./data/app.log"
 
     # Email settings
-    SMTP_SERVER: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USERNAME: str = ""
-    SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = ""
-    EMAIL_TO: str = ""
+    SMTP_SERVER: str =Field(..., description="SMTP_SERVER")
+    SMTP_PORT: int =Field(..., description="SMTP_PORT")
+    #SMTP_USERNAME: str = ""
+    #SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = Field(..., description="Email sender")
+    EMAIL_TO: str = Field(..., description="Email sent to")
     
     # BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     # ENV_PATH = os.path.join(BASE_DIR, ".env")

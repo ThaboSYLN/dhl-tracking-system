@@ -1,0 +1,39 @@
+SMTP server is  ----
+
+
+Port 587 is the default mail submission port. 
+SMTP_PORT = 587 is the one we will use
+
+
+
+
+# The standard port (Try 587 first, as it is the industry standard for submission)
+SMTP_PORT=587
+
+# The "emailfrom" provided by your team leaders
+SMTP_SENDER=sender@yourcompany.com
+
+# The "emailTo" (Can be a single address or comma-separated list)
+SMTP_RECIPIENT=leader1@yourcompany.com,leader2@yourcompany.com
+
+# If the server requires a login (Optional, check with your team)
+SMTP_USERNAME=your_username_or_email
+SMTP_PASSWORD=your_secure_password
+
+ reporting_support@idemia.com
+
+# The IP provided by your leaders
+SMTP_SERVER=----
+
+# Try 25 first for internal relays; try 587 if that fails
+SMTP_PORT=25
+
+# The email details provided
+SMTP_SENDER=sender@yourcompany.com
+SMTP_RECIPIENT=leader@yourcompany.com
+
+
+Port	Usage
+25	Internal relay (often LAN-only)
+587	Authenticated SMTP (TLS)
+465	SSL

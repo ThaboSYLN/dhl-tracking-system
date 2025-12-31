@@ -18,8 +18,6 @@ class EmailService:
             cls._instance = super().__new__(cls)
             cls._instance.enabled = all([
                 settings.SMTP_SERVER,
-                settings.SMTP_USERNAME,
-                settings.SMTP_PASSWORD,
                 settings.EMAIL_FROM,
                 settings.EMAIL_TO
             ])
@@ -55,7 +53,7 @@ class EmailService:
         try:
             with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
                 server.starttls()
-                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                #server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
                 server.sendmail(settings.EMAIL_FROM, self.recipients, msg.as_string())
             logger.info(f"Auto-email sent → {', '.join(self.recipients)}")
         except Exception as e:

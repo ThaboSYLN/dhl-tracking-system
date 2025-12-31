@@ -272,8 +272,9 @@ class AutomationService:
                 await self.process_file(file_path, source_folder)
             
 
-            logger.info(f"SMTP_USER: {settings.SMTP_USERNAME}")
-            logger.info(f"SMTP_PASS: {settings.SMTP_PASSWORD}")
+
+            #logger.info(f"SMTP_USER: {settings.SMTP_USERNAME}")
+            #logger.info(f"SMTP_PASS: {settings.SMTP_PASSWORD}")
             logger.info(f"EMAIL_TO: {settings.EMAIL_TO}")
             logger.info(f"Enabled: {EmailService().enabled}")
             
