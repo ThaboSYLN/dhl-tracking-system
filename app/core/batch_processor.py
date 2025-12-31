@@ -37,7 +37,7 @@ class BatchProcessor:
         self.batch_size = 5
         self.batch_delay = 7
         self.daily_limit = settings.DHL_DAILY_LIMIT
-        self.max_retries = 5
+        self.max_retries = 10
         self.retry_delay = 10
     
     def generate_batch_id(self) -> str:

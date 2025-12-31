@@ -58,3 +58,6 @@ class EmailService:
             logger.info(f"Auto-email sent → {', '.join(self.recipients)}")
         except Exception as e:
             logger.error(f"Email failed: {e}")
+
+
+            
