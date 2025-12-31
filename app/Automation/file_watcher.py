@@ -150,7 +150,8 @@ class FileWatcher:
                     # Check if already processed
                     unique_key = f"{folder_config.name}:{file_path.name}"
                     if unique_key in self.processed_files:
-                        continue
+                        #continue
+                        pass
                     
                     # Check if file is still being written
                     if self._is_file_stable(file_path):
@@ -186,8 +187,8 @@ class FileWatcher:
             shutil.copy2(str(file_path), str(destination))  # Copy first
             file_path.unlink()  # Then delete original
             
-            unique_key = f"{source_folder}:{file_path.name}"
-            self.processed_files.add(unique_key)
+           #unique_key = f"{source_folder}:{file_path.name}"
+           # self.processed_files.add(unique_key)
             
             logger.info(f"Moved to processed: {file_path.name} -> {new_name}")
             return destination
