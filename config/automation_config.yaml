@@ -33,7 +33,7 @@ automation:
   processing:
     immediate_process: true
     max_retries: 3
-    watch_interval: 10  # Check every 10 seconds
+    watch_interval: 60  # Check every 10 seconds
   
   # Auto-generate PDF reports after processing
   auto_reports:
