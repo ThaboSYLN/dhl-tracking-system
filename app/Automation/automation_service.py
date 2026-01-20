@@ -18,6 +18,7 @@ from app.Automation.file_watcher import FileWatcher
 from app.Automation.scheduler import AutomationScheduler
 from app.core.file_processor import file_processor
 from app.core.batch_processor import BatchProcessor
+
 from app.core.dhl_services import dhl_service
 from app.core.export_services import export_service
 from app.repositories import TrackingRepository, APIUsageRepository, ExportRepository
@@ -45,11 +46,18 @@ class AutomationService:
         self.config = self._load_config(config_path)
         self.is_running = False
         
+        # Track last scheduled processing hour to avoid duplicates
+        self.last_scheduled_hour = None
+        
+        # Get scheduled-only filenames from config
+        scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        
         # Initialize file watcher with multiple folders
         self.file_watcher = FileWatcher(
             inbox_configs=self.config['automation']['inbox_folders'],
             processed_folder=self.config['automation']['processed_folder'],
-            failed_folder=self.config['automation']['failed_folder']
+            failed_folder=self.config['automation']['failed_folder'],
+            scheduled_filenames=scheduled_filenames
         )
         
         self.scheduler = AutomationScheduler()
@@ -99,7 +107,8 @@ class AutomationService:
                 'processing': {
                     'immediate_process': True,
                     'max_retries': 3,
-                    'watch_interval': 10
+                    'watch_interval': 10,
+                    'scheduled_only_files': ['thabo']
                 },
                 'auto_reports': {
                     'enabled': True,
@@ -253,9 +262,27 @@ class AutomationService:
         
         Args:
             scheduled_run: If True, process ALL files including 'Thabo' files
-                          If False, skip 'Thabo' files (immediate processing mode)
+                          If False, check current time and process accordingly
         """
         try:
+            current_time = datetime.now()
+            
+            # If not explicitly a scheduled run, check if we're in the scheduled hour
+            if not scheduled_run:
+                schedule_time = self.config['automation']['schedule']['time']
+                schedule_hour = int(schedule_time.split(':')[0])
+                
+                # If current hour matches scheduled hour AND we haven't processed this hour yet
+                if current_time.hour == schedule_hour:
+                    # Check if we already processed scheduled files this hour
+                    if self.last_scheduled_hour != schedule_hour:
+                        logger.info(f"Current hour ({current_time.hour}) matches scheduled hour ({schedule_hour})")
+                        logger.info("SCHEDULED HOUR DETECTED: Processing ALL files including scheduled-only files...")
+                        scheduled_run = True
+                        self.last_scheduled_hour = schedule_hour
+                    else:
+                        logger.info(f"Already processed scheduled files this hour ({schedule_hour})")
+            
             if scheduled_run:
                 logger.info("SCHEDULED SCAN: Processing ALL files including scheduled-only files...")
                 new_files = self.file_watcher.get_scheduled_files()
@@ -280,15 +307,20 @@ class AutomationService:
             logger.error(f"Error in scan_and_process: {e}")
     
     async def watch_loop(self):
-        """Continuous file watching loop - EXCLUDES scheduled-only files"""
+        """Continuous file watching loop - Automatically detects scheduled hour"""
         watch_interval = self.config['automation']['processing']['watch_interval']
         
         logger.info(f"File watcher started (checking every {watch_interval} seconds)")
-        logger.info("NOTE: Files named 'Thabo' will be processed only during scheduled runs")
+        
+        scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        logger.info(f"Scheduled-only files: {', '.join(scheduled_filenames)}")
+        
+        schedule_time = self.config['automation']['schedule']['time']
+        logger.info(f"Scheduled processing hour: {schedule_time} (processes scheduled files anytime during this hour)")
         
         while self.is_running:
             try:
-                # Immediate processing mode - excludes 'Thabo' files
+                # The scan_and_process method automatically detects if we're in scheduled hour
                 await self.scan_and_process(scheduled_run=False)
                 await asyncio.sleep(watch_interval)
                 
@@ -350,7 +382,10 @@ class AutomationService:
             # Start watch loop
             if self.config['automation']['processing']['immediate_process']:
                 logger.info("Immediate processing enabled")
-                logger.info("NOTE: Files named 'Thabo' will wait for scheduled time")
+                schedule_time = self.config['automation']['schedule']['time']
+                schedule_hour = schedule_time.split(':')[0]
+                scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+                logger.info(f"Scheduled files ({', '.join(scheduled_filenames)}) will be processed anytime during hour {schedule_hour}")
                 await self.watch_loop()
             else:
                 logger.info("Running in scheduled mode only")
@@ -405,4 +440,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

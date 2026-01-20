@@ -104,7 +104,8 @@ async def run_automation_scan(db: Session, process_all: bool = False) -> dict:
     
     Args:
         db: Database session
-        process_all: If True, process ALL files including 'Thabo' (scheduled mode)
+        process_all: If True, process ALL files including '
+        ' (scheduled mode)
                     If False, skip 'Thabo' files (immediate mode)
     
     Returns:
@@ -128,11 +129,15 @@ async def run_automation_scan(db: Session, process_all: bool = False) -> dict:
         if not config:
             raise Exception("Failed to load automation configuration")
         
+        # Get scheduled-only filenames from config
+        scheduled_filenames = config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        
         # Initialize file watcher
         file_watcher = FileWatcher(
             inbox_configs=config['automation']['inbox_folders'],
             processed_folder=config['automation']['processed_folder'],
-            failed_folder=config['automation']['failed_folder']
+            failed_folder=config['automation']['failed_folder'],
+            scheduled_filenames=scheduled_filenames
         )
         
         # Initialize batch processor

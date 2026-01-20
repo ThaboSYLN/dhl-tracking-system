@@ -32,12 +32,17 @@ class FileWatcher:
     Supports: Local folders, Network UNC paths, Mapped drives
     """
     
-    def __init__(self, inbox_configs: List[Dict], processed_folder: str, failed_folder: str):
+    def __init__(self, inbox_configs: List[Dict], processed_folder: str, failed_folder: str, scheduled_filenames: List[str] = None):
         # Parse inbox configurations
         self.inbox_folders = [NetworkFolderConfig(cfg) for cfg in inbox_configs]
         
         self.processed_folder = Path(processed_folder)
         self.failed_folder = Path(failed_folder)
+        
+        # Files that should only be processed during scheduled time
+        self.scheduled_filenames = scheduled_filenames or ['thabo']
+        # Convert to lowercase for case-insensitive comparison
+        self.scheduled_filenames = [name.lower() for name in self.scheduled_filenames]
         
         # Create output folders
         self.processed_folder.mkdir(parents=True, exist_ok=True)
@@ -51,6 +56,7 @@ class FileWatcher:
         
         logger.info(f"File Watcher initialized")
         logger.info(f"Monitoring {len([f for f in self.inbox_folders if f.enabled])} inbox folder(s)")
+        logger.info(f"Scheduled-only files: {', '.join(self.scheduled_filenames)}")
         logger.info(f"Processed: {self.processed_folder}")
         logger.info(f"Failed: {self.failed_folder}")
     
@@ -118,7 +124,7 @@ class FileWatcher:
     def _should_skip_for_immediate_processing(self, file_path: Path) -> bool:
         """
         Check if file should be skipped during immediate processing.
-        Files named 'Thabo' (case-insensitive) should wait for scheduled processing.
+        Files in the scheduled_filenames list (case-insensitive) should wait for scheduled processing.
         
         Returns:
             True if file should be skipped (wait for schedule)
@@ -126,12 +132,12 @@ class FileWatcher:
         """
         file_stem = file_path.stem.lower()
         
-        if file_stem == 'thabo':
+        if file_stem in self.scheduled_filenames:
             logger.info(f"File '{file_path.name}' marked for scheduled processing only")
             return True
         
         return False
-    
+        
     def get_new_files(self, include_scheduled_only: bool = False) -> List[Tuple[Path, str]]:
         """
         Get list of new files from ALL enabled inbox folders
@@ -265,4 +271,5 @@ class FileWatcher:
         """Mark a file as processed without moving it"""
         unique_key = f"{source_folder}:{filename}"
         self.processed_files.add(unique_key)
-  
+
+
