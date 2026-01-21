@@ -35,6 +35,7 @@ class AutomationTriggerResponse(BaseModel):
     files_found: int
     files_processed: int
     files_failed: int
+    files_skipped: int
     reports_generated: int
     processing_time: Optional[float] = None
     
@@ -44,9 +45,10 @@ class AutomationTriggerResponse(BaseModel):
                 "success": True,
                 "message": "Automation scan completed successfully",
                 "files_found": 3,
-                "files_processed": 3,
+                "files_processed": 2,
                 "files_failed": 0,
-                "reports_generated": 3,
+                "files_skipped": 1,
+                "reports_generated": 2,
                 "processing_time": 45.5
             }
         }
@@ -96,10 +98,15 @@ def load_automation_config() -> dict:
         return None
 
 
-async def run_automation_scan(db: Session) -> dict:
+async def run_automation_scan(db: Session, process_all: bool = False) -> dict:
     """
     Run automation scan and process files
-    This is the core logic extracted from AutomationService
+    
+    Args:
+        db: Database session
+        process_all: If True, process ALL files including '
+        ' (scheduled mode)
+                    If False, skip 'Thabo' files (immediate mode)
     
     Returns:
         Dictionary with scan results
@@ -110,6 +117,7 @@ async def run_automation_scan(db: Session) -> dict:
         "files_found": 0,
         "files_processed": 0,
         "files_failed": 0,
+        "files_skipped": 0,
         "reports_generated": 0,
         "processing_time": 0.0,
         "errors": []
@@ -121,19 +129,27 @@ async def run_automation_scan(db: Session) -> dict:
         if not config:
             raise Exception("Failed to load automation configuration")
         
+        # Get scheduled-only filenames from config
+        scheduled_filenames = config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        
         # Initialize file watcher
         file_watcher = FileWatcher(
             inbox_configs=config['automation']['inbox_folders'],
             processed_folder=config['automation']['processed_folder'],
-            failed_folder=config['automation']['failed_folder']
+            failed_folder=config['automation']['failed_folder'],
+            scheduled_filenames=scheduled_filenames
         )
         
         # Initialize batch processor
         batch_processor = BatchProcessor(dhl_service)
         
         # Get new files from all folders
-        logger.info("[search...]>API Trigger: Scanning inbox folders...")
-        new_files = file_watcher.get_new_files()
+        if process_all:
+            logger.info("API Trigger: SCHEDULED MODE - Processing ALL files...")
+            new_files = file_watcher.get_scheduled_files()
+        else:
+            logger.info("API Trigger: IMMEDIATE MODE - Scanning inbox folders (skipping scheduled-only files)...")
+            new_files = file_watcher.get_new_files(include_scheduled_only=False)
         
         results["files_found"] = len(new_files)
         
@@ -198,10 +214,10 @@ async def run_automation_scan(db: Session) -> dict:
                         else:
                             report_path = export_service.generate_docx(records, True)
                         
-                        logger.info(f"--- Report generated: {report_path}")
+                        logger.info(f"Report generated: {report_path}")
                         results["reports_generated"] += 1
 
-                        # ✅ SEND EMAIL (THIS WAS MISSING)
+                        # Send email
                         EmailService().send_report(
                             report_path,
                             source_file=file_path.name
@@ -220,7 +236,7 @@ async def run_automation_scan(db: Session) -> dict:
         end_time = datetime.now()
         results["processing_time"] = (end_time - start_time).total_seconds()
         
-        logger.info(f"--- API scan complete: {results['files_processed']} processed, {results['files_failed']} failed")
+        logger.info(f"API scan complete: {results['files_processed']} processed, {results['files_failed']} failed, {results['files_skipped']} skipped")
         
     except Exception as e:
         logger.error(f"Error in automation scan: {e}")
@@ -232,6 +248,7 @@ async def run_automation_scan(db: Session) -> dict:
 @router.post("/trigger", response_model=AutomationTriggerResponse, summary="Trigger Automation Scan")
 async def trigger_automation(
     background_tasks: BackgroundTasks,
+    process_all: bool = False,
     db: Session = Depends(get_db)
 ):
     """
@@ -243,8 +260,13 @@ async def trigger_automation(
     - Generates PDF reports automatically
     - Moves files to processed/failed folders
     
+    **Parameters:**
+    - **process_all**: If True, process ALL files including 'Thabo' (scheduled mode)
+                      If False, skip 'Thabo' files (immediate mode, default)
+    
     **Use cases:**
-    - Process files immediately without waiting for schedule
+    - Process files immediately without waiting for schedule (process_all=False)
+    - Manually trigger scheduled processing (process_all=True)
     - Test automation without running full service
     - On-demand processing via API
     
@@ -261,16 +283,19 @@ async def trigger_automation(
         automation_state.is_scanning = True
         
         # Run scan
-        results = await run_automation_scan(db)
+        results = await run_automation_scan(db, process_all=process_all)
         
         automation_state.is_scanning = False
         
+        mode = "SCHEDULED MODE (all files)" if process_all else "IMMEDIATE MODE (excluding scheduled-only files)"
+        
         return AutomationTriggerResponse(
             success=True,
-            message="Automation scan completed successfully" if not results["errors"] else "Scan completed with errors",
+            message=f"Automation scan completed successfully ({mode})" if not results["errors"] else f"Scan completed with errors ({mode})",
             files_found=results["files_found"],
             files_processed=results["files_processed"],
             files_failed=results["files_failed"],
+            files_skipped=results["files_skipped"],
             reports_generated=results["reports_generated"],
             processing_time=results["processing_time"]
         )
@@ -286,7 +311,7 @@ async def trigger_automation(
 
 @router.get("/status", response_model=AutomationStatusResponse, summary="Get Automation Status")
 async def get_automation_status(db: Session = Depends(get_db)):
-    """s
+    """
     Get current automation status and configuration
     
     **Returns:**
@@ -388,16 +413,16 @@ async def get_export_status():
             "active_files": {
                 "count": status["active_count"],
                 "total_size_mb": status["active_size_mb"],
-                "files": status["active_files"][:10]  # First 10 files
+                "files": status["active_files"][:10]
             },
             "archived_files": {
                 "count": status["archived_count"],
                 "total_size_mb": status["archived_size_mb"],
-                "files": status["archived_files"][:10]  # First 10 files
+                "files": status["archived_files"][:10]
             }
         }
     except Exception as e:
-       # logger(f"Error getting export status: {e}")
         logger.error(f"Error getting export status:{e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 

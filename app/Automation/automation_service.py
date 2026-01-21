@@ -1,5 +1,5 @@
 """
-Automation Service - WITH AUTO-REPORTS
+Automation Service - WITH AUTO-REPORTS AND SCHEDULED FILE PROCESSING
 Main service with network folder support and automatic PDF generation
 """
 import asyncio
@@ -18,6 +18,7 @@ from app.Automation.file_watcher import FileWatcher
 from app.Automation.scheduler import AutomationScheduler
 from app.core.file_processor import file_processor
 from app.core.batch_processor import BatchProcessor
+
 from app.core.dhl_services import dhl_service
 from app.core.export_services import export_service
 from app.repositories import TrackingRepository, APIUsageRepository, ExportRepository
@@ -33,12 +34,11 @@ class AutomationService:
     Main automation service with network support and auto-reports
     """
     async def _run_export_cleanup(self):
-
         """Run export cleanup"""
         try:
             logger.info("Running scheduled export cleanup...")
             stats = export_cleanup_service.cleanup_exports()
-            logger.info(f"cleanup completed:{stats['files_archived,']}  aechived, {stats['files_deleted']}  deleted")
+            logger.info(f"cleanup completed:{stats['files_archived']} archived, {stats['files_deleted']} deleted")
         except Exception as e:
             logger.error(f"Error in scheduled cleanup:{e}")    
    
@@ -46,29 +46,30 @@ class AutomationService:
         self.config = self._load_config(config_path)
         self.is_running = False
         
+        # Track last scheduled processing hour to avoid duplicates
+        self.last_scheduled_hour = None
+        
+        # Get scheduled-only filenames from config
+        scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        
         # Initialize file watcher with multiple folders
         self.file_watcher = FileWatcher(
             inbox_configs=self.config['automation']['inbox_folders'],
             processed_folder=self.config['automation']['processed_folder'],
-            failed_folder=self.config['automation']['failed_folder']
+            failed_folder=self.config['automation']['failed_folder'],
+            scheduled_filenames=scheduled_filenames
         )
         
         self.scheduler = AutomationScheduler()
         self.batch_processor = BatchProcessor(dhl_service)
         
         # Setup signal handlers
-        # signal.signal(signal.SIGINT, self._signal_handler)
-        # signal.signal(signal.SIGTERM, self._signal_handler)
-
         import threading
-
-        # Setup signal handlers ONLY in main thread
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, self._signal_handler)
             signal.signal(signal.SIGTERM, self._signal_handler)
-
         
-        logger.info(":) Automation Service initialized")
+        logger.info("Automation Service initialized")
     
     def _load_config(self, config_path: str) -> dict:
         """Load configuration from YAML file"""
@@ -106,7 +107,8 @@ class AutomationService:
                 'processing': {
                     'immediate_process': True,
                     'max_retries': 3,
-                    'watch_interval': 10
+                    'watch_interval': 10,
+                    'scheduled_only_files': ['thabo']
                 },
                 'auto_reports': {
                     'enabled': True,
@@ -133,7 +135,7 @@ class AutomationService:
             return None
         
         try:
-            logger.info(f"📄 Generating automatic report for {len(tracking_numbers)} records...")
+            logger.info(f"Generating automatic report for {len(tracking_numbers)} records...")
             
             # Get configuration
             report_config = self.config['automation']['auto_reports']
@@ -169,8 +171,8 @@ class AutomationService:
                     "record_count": len(records)
                 })
                 
-                logger.info(f"[:)] Report generated: {Path(file_path).name}")
-                logger.info(f"<-> Saved to: {file_path}")
+                logger.info(f"Report generated: {Path(file_path).name}")
+                logger.info(f"Saved to: {file_path}")
 
                 EmailService().send_report(file_path, source_file)
               
@@ -254,12 +256,39 @@ class AutomationService:
                 self.file_watcher.move_to_failed(file_path, source_folder, str(e))
                 return False, []
     
-    async def scan_and_process(self):
-        """Scan all inbox folders and process files"""
+    async def scan_and_process(self, scheduled_run: bool = False):
+        """
+        Scan all inbox folders and process files
+        
+        Args:
+            scheduled_run: If True, process ALL files including 'Thabo' files
+                          If False, check current time and process accordingly
+        """
         try:
-            logger.info(" ... Scanning all inbox folders for new files...")
+            current_time = datetime.now()
             
-            new_files = self.file_watcher.get_new_files()
+            # If not explicitly a scheduled run, check if we're in the scheduled hour
+            if not scheduled_run:
+                schedule_time = self.config['automation']['schedule']['time']
+                schedule_hour = int(schedule_time.split(':')[0])
+                
+                # If current hour matches scheduled hour AND we haven't processed this hour yet
+                if current_time.hour == schedule_hour:
+                    # Check if we already processed scheduled files this hour
+                    if self.last_scheduled_hour != schedule_hour:
+                        logger.info(f"Current hour ({current_time.hour}) matches scheduled hour ({schedule_hour})")
+                        logger.info("SCHEDULED HOUR DETECTED: Processing ALL files including scheduled-only files...")
+                        scheduled_run = True
+                        self.last_scheduled_hour = schedule_hour
+                    else:
+                        logger.info(f"Already processed scheduled files this hour ({schedule_hour})")
+            
+            if scheduled_run:
+                logger.info("SCHEDULED SCAN: Processing ALL files including scheduled-only files...")
+                new_files = self.file_watcher.get_scheduled_files()
+            else:
+                logger.info("IMMEDIATE SCAN: Processing files (excluding scheduled-only files)...")
+                new_files = self.file_watcher.get_new_files(include_scheduled_only=False)
             
             if not new_files:
                 logger.info("No new files found")
@@ -271,10 +300,6 @@ class AutomationService:
             for file_path, source_folder in new_files:
                 await self.process_file(file_path, source_folder)
             
-
-
-            #logger.info(f"SMTP_USER: {settings.SMTP_USERNAME}")
-            #logger.info(f"SMTP_PASS: {settings.SMTP_PASSWORD}")
             logger.info(f"EMAIL_TO: {settings.EMAIL_TO}")
             logger.info(f"Enabled: {EmailService().enabled}")
             
@@ -282,63 +307,88 @@ class AutomationService:
             logger.error(f"Error in scan_and_process: {e}")
     
     async def watch_loop(self):
-        """Continuous file watching loop"""
+        """Continuous file watching loop - Automatically detects scheduled hour"""
         watch_interval = self.config['automation']['processing']['watch_interval']
         
-        logger.info(f"👁️ File watcher started (checking every {watch_interval} seconds)")
+        logger.info(f"File watcher started (checking every {watch_interval} seconds)")
+        
+        scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        logger.info(f"Scheduled-only files: {', '.join(scheduled_filenames)}")
+        
+        schedule_time = self.config['automation']['schedule']['time']
+        logger.info(f"Scheduled processing hour: {schedule_time} (processes scheduled files anytime during this hour)")
         
         while self.is_running:
             try:
-                await self.scan_and_process()
+                # The scan_and_process method automatically detects if we're in scheduled hour
+                await self.scan_and_process(scheduled_run=False)
                 await asyncio.sleep(watch_interval)
                 
             except Exception as e:
                 logger.error(f"Error in watch loop: {e}")
                 await asyncio.sleep(watch_interval)
     
+    async def scheduled_scan_task(self):
+        """
+        Task that runs at scheduled time (e.g., 9:00 AM)
+        This processes ALL files including 'Thabo'
+        """
+        logger.info("=" * 80)
+        logger.info("SCHEDULED TASK TRIGGERED")
+        logger.info("Processing ALL files including scheduled-only files")
+        logger.info("=" * 80)
+        
+        await self.scan_and_process(scheduled_run=True)
+    
     async def run_async(self):
-        self.scheduler.add_daily_task(
-            self._run_export_cleanup,
-            hour=2,# for testing we can change it to the nearest time   12
-            minute=0,
-            task_name="export_cleanup")
-        #=ROUND((B8/B$8)*100,2)
-        #=ROUND((F3+F7)+1,2)
-        logger.info(f"<-> Scheduled export cleanup at 2:00")
         """Async main loop"""
         try:
             logger.info("=" * 60)
-            logger.info("--> Starting DHL Tracking Automation Service")
+            logger.info("Starting DHL Tracking Automation Service")
             logger.info("=" * 60)
             
             self.is_running = True
+            
+            # Schedule export cleanup at 2:00 AM
+            self.scheduler.add_daily_task(
+                self._run_export_cleanup,
+                hour=2,
+                minute=0,
+                task_name="export_cleanup"
+            )
+            logger.info(f"Scheduled export cleanup at 2:00 AM")
             
             # Setup scheduler if enabled
             if self.config['automation']['schedule']['enabled']:
                 schedule_time = self.config['automation']['schedule']['time']
                 hour, minute = map(int, schedule_time.split(':'))
                 
+                # Schedule the task that processes ALL files
                 self.scheduler.add_daily_task(
-                    self.scan_and_process,
+                    self.scheduled_scan_task,
                     hour=hour,
                     minute=minute,
                     task_name="daily_file_scan"
                 )
                 
                 self.scheduler.start()
-                logger.info(f"📅 Scheduled daily scan at {schedule_time}")
+                logger.info(f"Scheduled daily scan at {schedule_time} (processes ALL files)")
             
             # Log auto-report status
             if self.config['automation']['auto_reports']['enabled']:
                 report_format = self.config['automation']['auto_reports']['format'].upper()
-                logger.info(f"📄 Auto-reports enabled ({report_format} format)")
+                logger.info(f"Auto-reports enabled ({report_format} format)")
             
             # Start watch loop
             if self.config['automation']['processing']['immediate_process']:
-                logger.info("⚡ Immediate processing enabled")
+                logger.info("Immediate processing enabled")
+                schedule_time = self.config['automation']['schedule']['time']
+                schedule_hour = schedule_time.split(':')[0]
+                scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+                logger.info(f"Scheduled files ({', '.join(scheduled_filenames)}) will be processed anytime during hour {schedule_hour}")
                 await self.watch_loop()
             else:
-                logger.info("⏰ Running in scheduled mode only")
+                logger.info("Running in scheduled mode only")
                 while self.is_running:
                     await asyncio.sleep(60)
                     
@@ -364,13 +414,13 @@ class AutomationService:
     
     def stop(self):
         """Stop the automation service"""
-        logger.info("🛑 Stopping automation service...")
+        logger.info("Stopping automation service...")
         self.is_running = False
         
         if self.scheduler:
             self.scheduler.stop()
         
-        logger.info("✅ Automation service stopped")
+        logger.info("Automation service stopped")
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
@@ -390,3 +440,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

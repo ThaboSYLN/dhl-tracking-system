@@ -1,5 +1,5 @@
 """
-File Watcher - WITH NETWORK FOLDER SUPPORT
+File Watcher - WITH NETWORK FOLDER SUPPORT AND FILE FILTERING
 Monitors multiple inbox folders (local, network, mapped drives)
 """
 import os
@@ -32,12 +32,17 @@ class FileWatcher:
     Supports: Local folders, Network UNC paths, Mapped drives
     """
     
-    def __init__(self, inbox_configs: List[Dict], processed_folder: str, failed_folder: str):
+    def __init__(self, inbox_configs: List[Dict], processed_folder: str, failed_folder: str, scheduled_filenames: List[str] = None):
         # Parse inbox configurations
         self.inbox_folders = [NetworkFolderConfig(cfg) for cfg in inbox_configs]
         
         self.processed_folder = Path(processed_folder)
         self.failed_folder = Path(failed_folder)
+        
+        # Files that should only be processed during scheduled time
+        self.scheduled_filenames = scheduled_filenames or ['thabo']
+        # Convert to lowercase for case-insensitive comparison
+        self.scheduled_filenames = [name.lower() for name in self.scheduled_filenames]
         
         # Create output folders
         self.processed_folder.mkdir(parents=True, exist_ok=True)
@@ -51,6 +56,7 @@ class FileWatcher:
         
         logger.info(f"File Watcher initialized")
         logger.info(f"Monitoring {len([f for f in self.inbox_folders if f.enabled])} inbox folder(s)")
+        logger.info(f"Scheduled-only files: {', '.join(self.scheduled_filenames)}")
         logger.info(f"Processed: {self.processed_folder}")
         logger.info(f"Failed: {self.failed_folder}")
     
@@ -58,7 +64,7 @@ class FileWatcher:
         """Initialize and validate all inbox folders"""
         for folder_config in self.inbox_folders:
             if not folder_config.enabled:
-                logger.info(f"⏸️  Folder disabled: {folder_config.name}")
+                logger.info(f"Folder disabled: {folder_config.name}")
                 continue
             
             try:
@@ -67,14 +73,14 @@ class FileWatcher:
                 
                 # Test read access
                 if folder_config.path.exists() and folder_config.path.is_dir():
-                    logger.info(f"--> Folder accessible: {folder_config.name} -> {folder_config.path}")
+                    logger.info(f"Folder accessible: {folder_config.name} -> {folder_config.path}")
                 else:
-                    logger.warning(f"⚠️  Folder not accessible: {folder_config.name} -> {folder_config.path}")
+                    logger.warning(f"Folder not accessible: {folder_config.name} -> {folder_config.path}")
                     
             except PermissionError:
-                logger.error(f" X-> Permission denied: {folder_config.name} -> {folder_config.path}")
+                logger.error(f"Permission denied: {folder_config.name} -> {folder_config.path}")
             except Exception as e:
-                logger.error(f"X-> Error accessing {folder_config.name}: {e}")
+                logger.error(f"Error accessing {folder_config.name}: {e}")
     
     def _connect_network_folder(self, folder_config: NetworkFolderConfig) -> bool:
         """
@@ -88,7 +94,7 @@ class FileWatcher:
         password = folder_config.credentials.get('password')
         
         if not username or not password:
-            # No credentials provided, assume direct access-- most varable 
+            # No credentials provided, assume direct access
             return True
         
         try:
@@ -105,19 +111,40 @@ class FileWatcher:
             cmd = ['net', 'use', str(folder_config.path), f'/user:{username}', password]
             result = subprocess.run(cmd, capture_output=True, check=True)
             
-            logger.info(f"✅ Connected to network folder: {folder_config.name}")
+            logger.info(f"Connected to network folder: {folder_config.name}")
             return True
             
         except subprocess.CalledProcessError as e:
-            logger.error(f"❌ Failed to connect to {folder_config.name}: {e}")
+            logger.error(f"Failed to connect to {folder_config.name}: {e}")
             return False
         except Exception as e:
-            logger.error(f"❌ Error connecting to network folder: {e}")
+            logger.error(f"Error connecting to network folder: {e}")
             return False
     
-    def get_new_files(self) -> List[Tuple[Path, str]]:
+    def _should_skip_for_immediate_processing(self, file_path: Path) -> bool:
+        """
+        Check if file should be skipped during immediate processing.
+        Files in the scheduled_filenames list (case-insensitive) should wait for scheduled processing.
+        
+        Returns:
+            True if file should be skipped (wait for schedule)
+            False if file should be processed immediately
+        """
+        file_stem = file_path.stem.lower()
+        
+        if file_stem in self.scheduled_filenames:
+            logger.info(f"File '{file_path.name}' marked for scheduled processing only")
+            return True
+        
+        return False
+        
+    def get_new_files(self, include_scheduled_only: bool = False) -> List[Tuple[Path, str]]:
         """
         Get list of new files from ALL enabled inbox folders
+        
+        Args:
+            include_scheduled_only: If True, include files marked for scheduled processing (like 'Thabo')
+                                   If False, exclude them (for immediate processing)
         
         Returns:
             List of tuples: [(file_path, source_folder_name), ...]
@@ -150,8 +177,13 @@ class FileWatcher:
                     # Check if already processed
                     unique_key = f"{folder_config.name}:{file_path.name}"
                     if unique_key in self.processed_files:
-                        #continue
                         pass
+                    
+                    # Check if file should be skipped for immediate processing
+                    if not include_scheduled_only:
+                        # Immediate processing mode - skip 'Thabo' files
+                        if self._should_skip_for_immediate_processing(file_path):
+                            continue
                     
                     # Check if file is still being written
                     if self._is_file_stable(file_path):
@@ -163,6 +195,16 @@ class FileWatcher:
                 logger.error(f"Error scanning {folder_config.name}: {e}")
         
         return new_files
+    
+    def get_scheduled_files(self) -> List[Tuple[Path, str]]:
+        """
+        Get files that should only be processed during scheduled runs.
+        This includes files named 'Thabo' and any other files that were waiting.
+        
+        Returns:
+            List of tuples: [(file_path, source_folder_name), ...]
+        """
+        return self.get_new_files(include_scheduled_only=True)
     
     def _is_file_stable(self, file_path: Path, wait_time: int = 2) -> bool:
         """Check if file size is stable (not currently being written)"""
@@ -184,11 +226,8 @@ class FileWatcher:
             new_name = f"{source_prefix}_{file_path.stem}_{timestamp}{file_path.suffix}"
             destination = self.processed_folder / new_name
             
-            shutil.copy2(str(file_path), str(destination))  # Copy first
-            file_path.unlink()  # Then delete original
-            
-           #unique_key = f"{source_folder}:{file_path.name}"
-           # self.processed_files.add(unique_key)
+            shutil.copy2(str(file_path), str(destination))
+            file_path.unlink()
             
             logger.info(f"Moved to processed: {file_path.name} -> {new_name}")
             return destination
@@ -232,4 +271,5 @@ class FileWatcher:
         """Mark a file as processed without moving it"""
         unique_key = f"{source_folder}:{filename}"
         self.processed_files.add(unique_key)
+
 

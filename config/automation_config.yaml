@@ -33,7 +33,13 @@ automation:
   processing:
     immediate_process: true
     max_retries: 3
-    watch_interval: 60  # Check every 10 seconds
+    watch_interval: 60  # Check every 60 seconds
+    
+    # Files that should only be processed during scheduled time
+    # Add filenames WITHOUT extension (case-insensitive)
+    scheduled_only_files:
+      - "thabo" # Tesing 
+      - "dhl_waybill_validation"
   
   # Auto-generate PDF reports after processing
   auto_reports:
@@ -48,3 +54,4 @@ logging:
   level: "INFO"
   keep_days: 30
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
