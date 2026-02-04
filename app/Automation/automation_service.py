@@ -1,6 +1,6 @@
 """
-Automation Service - WITH AUTO-REPORTS AND SCHEDULED FILE PROCESSING
-Main service with network folder support and automatic PDF generation
+Automation Service - WITH AUTO-REPORTS, SCHEDULED FILE PROCESSING, AND WAYBILL VALIDATOR
+Main service with network folder support, automatic PDF generation, and specialized waybill validation
 """
 import asyncio
 import logging
@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.Automation.file_watcher import FileWatcher
 from app.Automation.scheduler import AutomationScheduler
+from app.Automation.waybill_validator_scanner import WaybillValidatorScanner
 from app.core.file_processor import file_processor
 from app.core.batch_processor import BatchProcessor
 
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class AutomationService:
     """
-    Main automation service with network support and auto-reports
+    Main automation service with network support, auto-reports, and waybill validation
     """
     async def _run_export_cleanup(self):
         """Run export cleanup"""
@@ -60,6 +61,14 @@ class AutomationService:
             scheduled_filenames=scheduled_filenames
         )
         
+        # NEW: Initialize waybill validator scanner
+        self.waybill_scanner = WaybillValidatorScanner(
+            search_root="\\\\soj3serv07\\Production To Office\\DHL\\",
+            target_filename="dhl_waybill_validation",
+            processed_folder=self.config['automation']['processed_folder'],
+            failed_folder=self.config['automation']['failed_folder']
+        )
+        
         self.scheduler = AutomationScheduler()
         self.batch_processor = BatchProcessor(dhl_service)
         
@@ -69,7 +78,7 @@ class AutomationService:
             signal.signal(signal.SIGINT, self._signal_handler)
             signal.signal(signal.SIGTERM, self._signal_handler)
         
-        logger.info("Automation Service initialized")
+        logger.info("Automation Service initialized with Waybill Validator")
     
     def _load_config(self, config_path: str) -> dict:
         """Load configuration from YAML file"""
@@ -108,7 +117,7 @@ class AutomationService:
                     'immediate_process': True,
                     'max_retries': 3,
                     'watch_interval': 10,
-                    'scheduled_only_files': ['thabo']
+                    'scheduled_only_files': ['thabo', 'dhl_waybill_validation']
                 },
                 'auto_reports': {
                     'enabled': True,
@@ -235,8 +244,11 @@ class AutomationService:
             # Get list of tracking numbers for report
             tracking_numbers = [waybill for waybill, _ in tracking_data]
             
-            # Move to processed folder
-            self.file_watcher.move_to_processed(file_path, source_folder)
+            # Move to processed folder based on source
+            if source_folder == "DHL Waybill Validator":
+                self.waybill_scanner.move_to_processed(file_path)
+            else:
+                self.file_watcher.move_to_processed(file_path, source_folder)
             
             # Generate automatic report
             await self.generate_report(tracking_numbers, file_path.name)
@@ -253,15 +265,18 @@ class AutomationService:
                 return await self.process_file(file_path, source_folder, retries + 1)
             else:
                 # Move to failed folder
-                self.file_watcher.move_to_failed(file_path, source_folder, str(e))
+                if source_folder == "DHL Waybill Validator":
+                    self.waybill_scanner.move_to_failed(file_path, str(e))
+                else:
+                    self.file_watcher.move_to_failed(file_path, source_folder, str(e))
                 return False, []
     
     async def scan_and_process(self, scheduled_run: bool = False):
         """
-        Scan all inbox folders and process files
+        Scan all inbox folders AND waybill validator and process files
         
         Args:
-            scheduled_run: If True, process ALL files including 'Thabo' files
+            scheduled_run: If True, process ALL files including 'Thabo' and validation files
                           If False, check current time and process accordingly
         """
         try:
@@ -283,21 +298,42 @@ class AutomationService:
                     else:
                         logger.info(f"Already processed scheduled files this hour ({schedule_hour})")
             
+            all_files = []
+            
+            # Get regular inbox files
             if scheduled_run:
                 logger.info("SCHEDULED SCAN: Processing ALL files including scheduled-only files...")
-                new_files = self.file_watcher.get_scheduled_files()
+                inbox_files = self.file_watcher.get_scheduled_files()
             else:
                 logger.info("IMMEDIATE SCAN: Processing files (excluding scheduled-only files)...")
-                new_files = self.file_watcher.get_new_files(include_scheduled_only=False)
+                inbox_files = self.file_watcher.get_new_files(include_scheduled_only=False)
             
-            if not new_files:
+            all_files.extend(inbox_files)
+            
+            # NEW: Get waybill validation file (only during scheduled runs)
+            if scheduled_run:
+                logger.info("\n" + "=" * 80)
+                logger.info("SEARCHING FOR DHL WAYBILL VALIDATION FILE")
+                logger.info("=" * 80)
+                
+                validation_file = self.waybill_scanner.find_validation_file()
+                
+                if validation_file:
+                    all_files.append(validation_file)
+                    logger.info("✓ Waybill validation file added to processing queue")
+                else:
+                    logger.info("No waybill validation file found this scan")
+                
+                logger.info("=" * 80 + "\n")
+            
+            if not all_files:
                 logger.info("No new files found")
                 return
             
-            logger.info(f"Found {len(new_files)} new file(s)")
+            logger.info(f"Found {len(all_files)} new file(s) total")
             
             # Process each file
-            for file_path, source_folder in new_files:
+            for file_path, source_folder in all_files:
                 await self.process_file(file_path, source_folder)
             
             logger.info(f"EMAIL_TO: {settings.EMAIL_TO}")
@@ -312,11 +348,12 @@ class AutomationService:
         
         logger.info(f"File watcher started (checking every {watch_interval} seconds)")
         
-        scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+        scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo', 'dhl_waybill_validation'])
         logger.info(f"Scheduled-only files: {', '.join(scheduled_filenames)}")
         
         schedule_time = self.config['automation']['schedule']['time']
         logger.info(f"Scheduled processing hour: {schedule_time} (processes scheduled files anytime during this hour)")
+        logger.info(f"Waybill validation file will be searched during scheduled hour")
         
         while self.is_running:
             try:
@@ -331,11 +368,11 @@ class AutomationService:
     async def scheduled_scan_task(self):
         """
         Task that runs at scheduled time (e.g., 9:00 AM)
-        This processes ALL files including 'Thabo'
+        This processes ALL files including 'Thabo' and waybill validation
         """
         logger.info("=" * 80)
         logger.info("SCHEDULED TASK TRIGGERED")
-        logger.info("Processing ALL files including scheduled-only files")
+        logger.info("Processing ALL files including scheduled-only files AND waybill validation")
         logger.info("=" * 80)
         
         await self.scan_and_process(scheduled_run=True)
@@ -345,6 +382,7 @@ class AutomationService:
         try:
             logger.info("=" * 60)
             logger.info("Starting DHL Tracking Automation Service")
+            logger.info("With Waybill Validation Scanner")
             logger.info("=" * 60)
             
             self.is_running = True
@@ -372,7 +410,7 @@ class AutomationService:
                 )
                 
                 self.scheduler.start()
-                logger.info(f"Scheduled daily scan at {schedule_time} (processes ALL files)")
+                logger.info(f"Scheduled daily scan at {schedule_time} (processes ALL files + waybill validation)")
             
             # Log auto-report status
             if self.config['automation']['auto_reports']['enabled']:
@@ -384,7 +422,7 @@ class AutomationService:
                 logger.info("Immediate processing enabled")
                 schedule_time = self.config['automation']['schedule']['time']
                 schedule_hour = schedule_time.split(':')[0]
-                scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo'])
+                scheduled_filenames = self.config['automation']['processing'].get('scheduled_only_files', ['thabo', 'dhl_waybill_validation'])
                 logger.info(f"Scheduled files ({', '.join(scheduled_filenames)}) will be processed anytime during hour {schedule_hour}")
                 await self.watch_loop()
             else:
@@ -440,5 +478,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
