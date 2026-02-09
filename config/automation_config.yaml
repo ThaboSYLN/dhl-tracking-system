@@ -1,4 +1,4 @@
-# Automation Configuration - Configured for soj3serv07
+# Automation Configuration - Configured for soj3serv07 + Waybill Validation
 
 automation:
   enabled: true
@@ -37,9 +37,10 @@ automation:
     
     # Files that should only be processed during scheduled time
     # Add filenames WITHOUT extension (case-insensitive)
+    # IMPORTANT: dhl_waybill_validation is now handled by special scanner
     scheduled_only_files:
-      - "thabo" # Tesing 
-      - "dhl_waybill_validation"
+      - "thabo"  # Testing file
+      - "dhl_waybill_validation"  # Waybill validation file (searched in entire DHL folder)
   
   # Auto-generate PDF reports after processing
   auto_reports:
@@ -54,4 +55,5 @@ logging:
   level: "INFO"
   keep_days: 30
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
 

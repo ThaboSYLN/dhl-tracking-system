@@ -37,8 +37,9 @@ class EmailService:
         body = "Hi team,\n\nA new tracking file has been processed.\n"
         if source_file:
             body += f"Source file: {source_file}\n"
-        body += "\nThe following waybills have been validated, proceed to close the relevant bins.\n\nPlease find the full report attached.\n\nBest Regards \nPre-Prod Team."
-
+        #body += "\nThe following waybills have been validated, proceed to close the relevant bins.\n\nPlease find the full report attached.\n\nBest Regards \nPre-Prod Team."
+        body += "\nKindly assist to close the undispatched BINs for Stanbic DHL so that their status can be updated to Shipped. \n\nThese BINs were unfortunately missed during the dispatch process and are currently preventing the status change which is affecting API push to CMS system for Stanbic to receive the cards on the system. \n\nPlease let us know once this has been completed, or if any additional information is required from our side. \n\nThank you for your support.\n\nPre-Production"
+ 
         msg = MIMEMultipart()
         msg["From"] = settings.EMAIL_FROM
         msg["To"] = ", ".join(self.recipients)
