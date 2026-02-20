@@ -37,9 +37,8 @@ class EmailService:
         body = "Hi team,\n\nA new tracking file has been processed.\n"
         if source_file:
             body += f"Source file: {source_file}\n"
-        #body += "\nThe following waybills have been validated, proceed to close the relevant bins.\n\nPlease find the full report attached.\n\nBest Regards \nPre-Prod Team."
         body += "\nKindly assist to close the undispatched BINs for Stanbic DHL so that their status can be updated to Shipped. \n\nThese BINs were unfortunately missed during the dispatch process and are currently preventing the status change which is affecting API push to CMS system for Stanbic to receive the cards on the system. \n\nPlease let us know once this has been completed, or if any additional information is required from our side. \n\nThank you for your support.\n\nPre-Production"
- 
+
         msg = MIMEMultipart()
         msg["From"] = settings.EMAIL_FROM
         msg["To"] = ", ".join(self.recipients)
@@ -54,11 +53,46 @@ class EmailService:
         try:
             with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
                 server.starttls()
-                #server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
                 server.sendmail(settings.EMAIL_FROM, self.recipients, msg.as_string())
             logger.info(f"Auto-email sent → {', '.join(self.recipients)}")
         except Exception as e:
             logger.error(f"Email failed: {e}")
 
+    def send_empty_report_alert(self, source_file: str = None):
+        """
+        Send an alert email when all records were filtered out of a report.
+        This fires when every record in the processed file had a status
+        that is excluded from reports (e.g. pre-transit).
+        The alert always goes to thabospenser@gmail.com.
+        """
+        alert_recipient = "thabo.mthethwa@external.idemia.com"
 
-            
+        subject = "⚠️ DHL Report Alert — No Records Included in Report"
+
+        body = "Hi,\n\n"
+        body += "A tracking file was processed but the generated report contains NO records.\n\n"
+        body += "This means every entry in the file had a status that is excluded from reports\n"
+        body += "(e.g. pre-transit or any other status on the exclusion list).\n\n"
+
+        if source_file:
+            body += f"Source file: {source_file}\n\n"
+
+        body += "Please review the file and check whether the statuses are expected.\n\n"
+        body += "If this keeps happening, consider updating the exclusion list in:\n"
+        body += "  app/core/export_services.py → PRE_TRANSIT_STATUSES\n\n"
+        body += "Pre-Production Team"
+
+        msg = MIMEMultipart()
+        msg["From"] = settings.EMAIL_FROM
+        msg["To"] = alert_recipient
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
+
+        try:
+            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+                server.starttls()
+                server.sendmail(settings.EMAIL_FROM, [alert_recipient], msg.as_string())
+            logger.info(f"Empty-report alert sent → {alert_recipient}")
+        except Exception as e:
+            logger.error(f"Failed to send empty-report alert: {e}")
+
