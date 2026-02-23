@@ -3,23 +3,21 @@ Export services for generating PDF and DOCX reports
 Handles document generation with tracking information
 
 CHANGES MADE:
-1. generate_pdf: Added binID column to PDF table
-2. generate_docx: Added binID column to DOCX table
+1. generate_pdf: Added binID column to PDF table (Lines 67-87, 91-102)
+2. generate_docx: Added binID column to DOCX table (Lines 155-185, 189-210)
 3. Both detailed and simple views now include binID
 4. _filter_records: Added pre-transit filtering - records with pre-transit status
    are excluded from reports entirely before generation
-5. Empty report alert: If ALL records are filtered out, an alert email is sent
-   to thabospenser@gmail.com via EmailService.send_empty_report_alert()
 """
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from typing import List
+from typing import List, Dict, Any
 from datetime import datetime
 import os
 from pathlib import Path
@@ -31,7 +29,8 @@ from app.models.database import TrackingRecord
 logger = logging.getLogger(__name__)
 
 
-
+# Status values that should be excluded from reports.
+# All comparisons are done case-insensitively.
 PRE_TRANSIT_STATUSES = {
     "pre-transit",
     "pretransit",
@@ -54,8 +53,8 @@ class ExportService:
         """
         Return True if the record's status represents a pre-transit state.
 
-        Checks both status_code and status fields so that whichever
-        field the DHL API populates is caught. Comparison is
+        Checks both ``status_code`` and ``status`` fields so that whichever
+        field the DHL API populates is caught.  Comparison is
         case-insensitive and strips surrounding whitespace.
         """
         fields_to_check = [
@@ -68,7 +67,9 @@ class ExportService:
                 return True
         return False
 
-    def _filter_records(self, records: List[TrackingRecord]) -> List[TrackingRecord]:
+    def _filter_records(
+        self, records: List[TrackingRecord]
+    ) -> List[TrackingRecord]:
         """
         Remove any records whose tracking status is pre-transit.
 
@@ -135,9 +136,9 @@ class ExportService:
         """
         Generate PDF report.
 
-        Pre-transit records are excluded before the document is built.
-        If ALL records are filtered out, an alert email is sent to
-        thabospenser@gmail.com and the PDF is still saved (but empty).
+        Pre-transit records are silently excluded before the document is
+        built.  A note showing the original vs. included record count is
+        added to the report header so readers know filtering occurred.
 
         Args:
             tracking_records: List of TrackingRecord objects.
@@ -171,7 +172,7 @@ class ExportService:
             elements.append(title)
 
             # ----------------------------------------------------------
-            # Generation info (includes filter note when records dropped)
+            # Generation info  (includes filter note when records dropped)
             # ----------------------------------------------------------
             info_style = styles["Normal"]
             info_text = (
@@ -192,9 +193,10 @@ class ExportService:
             elements.append(Spacer(1, 0.3 * inch))
 
             # ----------------------------------------------------------
-            # Edge case: ALL records were filtered out
+            # Table data
             # ----------------------------------------------------------
             if not tracking_records:
+                # Edge case: all records were pre-transit
                 elements.append(
                     Paragraph(
                         "No records to display — all entries were pre-transit.",
@@ -203,19 +205,8 @@ class ExportService:
                 )
                 doc.build(elements)
                 logger.info(f"PDF generated (empty after filter): {filename}")
-
-                # Send alert email because the report is completely empty
-                try:
-                    from app.utils.email_service import EmailService
-                    EmailService().send_empty_report_alert(source_file=filename)
-                except Exception as email_err:
-                    logger.error(f"Failed to send empty-report alert: {email_err}")
-
                 return filename
 
-            # ----------------------------------------------------------
-            # Table data
-            # ----------------------------------------------------------
             if include_details:
                 data = [[
                     "Tracking #",
@@ -252,7 +243,7 @@ class ExportService:
                     ])
 
             # ----------------------------------------------------------
-            # Build and style table
+            # Build & style table
             # ----------------------------------------------------------
             table = Table(data)
             table.setStyle(
@@ -296,9 +287,9 @@ class ExportService:
         """
         Generate DOCX report.
 
-        Pre-transit records are excluded before the document is built.
-        If ALL records are filtered out, an alert email is sent to
-        thabospenser@gmail.com and the DOCX is still saved (but empty).
+        Pre-transit records are silently excluded before the document is
+        built.  A note showing how many records were filtered is added
+        directly below the header paragraph.
 
         Args:
             tracking_records: List of TrackingRecord objects.
@@ -328,7 +319,9 @@ class ExportService:
             info_para.add_run(
                 f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
             ).bold = True
-            info_para.add_run(f"Records Included: {filtered_count}").bold = True
+            info_para.add_run(
+                f"Records Included: {filtered_count}"
+            ).bold = True
 
             if original_count != filtered_count:
                 dropped = original_count - filtered_count
@@ -343,7 +336,7 @@ class ExportService:
             doc.add_paragraph()
 
             # ----------------------------------------------------------
-            # Edge case: ALL records were filtered out
+            # Edge case: nothing left after filtering
             # ----------------------------------------------------------
             if not tracking_records:
                 doc.add_paragraph(
@@ -351,14 +344,6 @@ class ExportService:
                 )
                 doc.save(filename)
                 logger.info(f"DOCX generated (empty after filter): {filename}")
-
-                # Send alert email because the report is completely empty
-                try:
-                    from app.utils.email_service import EmailService
-                    EmailService().send_empty_report_alert(source_file=filename)
-                except Exception as email_err:
-                    logger.error(f"Failed to send empty-report alert: {email_err}")
-
                 return filename
 
             # ----------------------------------------------------------
@@ -448,4 +433,3 @@ class ExportService:
 
 # Create export service instance
 export_service = ExportService()
-
