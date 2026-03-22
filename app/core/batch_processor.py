@@ -4,10 +4,11 @@ Processes in batches of 20 with 7-second delays
 Automatically retries failed requests multiple times until success or max retries
 
 CHANGES MADE:
-1. _retry_failed_waybills: Now handles List[Tuple[waybill, binID]] (Line 54)
-2. _process_with_multi_retry: Now accepts and processes tracking_data tuples (Line 134)
-3. process_batch: Now accepts List[Tuple[waybill, binID]] (Line 269)
-4. process_large_batch: Now accepts List[Tuple[waybill, binID]] (Line 446)
+1. _retry_failed_waybills: Now handles List[Tuple[waybill, binID, date_order_binned]]
+2. _process_with_multi_retry: Now accepts and processes tracking_data 3-tuples
+3. process_batch: Now accepts List[Tuple[waybill, binID, date_order_binned]]
+4. process_large_batch: Now accepts List[Tuple[waybill, binID, date_order_binned]]
+5. date_order_binned is saved to DB but NOT sent to DHL API
 """
 import asyncio
 from typing import List, Dict, Any, Optional, Tuple
@@ -29,7 +30,7 @@ class BatchProcessor:
     - Processes 5 waybills per batch (configurable)
     - 7-second delays between batches
     - Automatic retry up to MAX_RETRIES times
-    - Maintains binID association throughout processing
+    - Maintains binID and date_order_binned association throughout processing
     """
     
     def __init__(self, dhl_service: DHLAPIService):
@@ -48,7 +49,7 @@ class BatchProcessor:
     
     async def _retry_failed_waybills(
         self,
-        failed_waybills: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
+        failed_waybills: List[Tuple[str, Optional[str], Optional[str]]],
         retry_attempt: int,
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository
@@ -56,10 +57,8 @@ class BatchProcessor:
         """
         Retry failed waybills with exponential backoff
         
-        UPDATED: Now handles List[Tuple[waybill, binID]]
-        
         Args:
-            failed_waybills: List of tuples [(waybill, binID), ...]
+            failed_waybills: List of tuples [(waybill, binID, date_order_binned), ...]
             retry_attempt: Current retry attempt number
             tracking_repo: Tracking repository
             api_usage_repo: API usage repository
@@ -76,17 +75,24 @@ class BatchProcessor:
         logger.info(f"Waiting {delay} seconds before retry...")
         await asyncio.sleep(delay)
         
-        # Process failed waybills with binID
-        retry_results = await self.dhl_service.track_batch(failed_waybills, delay=0.5)
+        # DHL API only needs (waybill, bin_id) — date is not sent to API
+        api_batch = [(w, b) for w, b, _ in failed_waybills]
+
+        # Build date lookup so we can recover date_order_binned after API call
+        date_lookup = {w: d for w, _, d in failed_waybills}
+
+        retry_results = await self.dhl_service.track_batch(api_batch, delay=0.5)
         
         successful = []
         still_failed = []
         
         for result in retry_results:
             tracking_number = result.get('tracking_number')
-            bin_id = result.get('bin_id')  # Preserve binID
+            bin_id = result.get('bin_id')
+            date_order_binned = date_lookup.get(tracking_number)
             
             if result.get('is_successful'):
+                result['date_order_binned'] = date_order_binned
                 successful.append(result)
                 logger.info(f"Retry success: {tracking_number} (binID: {bin_id})")
                 
@@ -96,7 +102,7 @@ class BatchProcessor:
                 except Exception as e:
                     logger.error(f"Error saving retry result: {str(e)}")
             else:
-                still_failed.append((tracking_number, bin_id))  # Keep as tuple
+                still_failed.append((tracking_number, bin_id, date_order_binned))
                 logger.warning(f"Retry failed: {tracking_number} (binID: {bin_id})")
                 api_usage_repo.increment_usage(success=False)
         
@@ -107,7 +113,7 @@ class BatchProcessor:
     
     async def _process_with_multi_retry(
         self,
-        tracking_data: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
+        tracking_data: List[Tuple[str, Optional[str], Optional[str]]],
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository,
         batch_id: str
@@ -116,10 +122,8 @@ class BatchProcessor:
         Process waybills with multi-level retry system
         Keeps retrying failed waybills until success or max retries reached
         
-        UPDATED: Now handles List[Tuple[waybill, binID]]
-        
         Args:
-            tracking_data: List of tuples [(waybill, binID), ...]
+            tracking_data: List of tuples [(waybill, binID, date_order_binned), ...]
             tracking_repo: Tracking repository
             api_usage_repo: API usage repository
             batch_id: Batch identifier
@@ -141,15 +145,23 @@ class BatchProcessor:
             
             logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} waybills)")
             
-            batch_results = await self.dhl_service.track_batch(batch, delay=0.2)
+            # DHL API only needs (waybill, bin_id) — date is not sent to API
+            api_batch = [(w, b) for w, b, _ in batch]
+
+            # Build date lookup for this batch
+            date_lookup = {w: d for w, _, d in batch}
+
+            batch_results = await self.dhl_service.track_batch(api_batch, delay=0.2)
             total_api_calls += len(batch)
             
             for result in batch_results:
                 tracking_number = result.get('tracking_number')
                 bin_id = result.get('bin_id')
+                date_order_binned = date_lookup.get(tracking_number)
                 
                 if result.get('is_successful'):
                     result['batch_id'] = batch_id
+                    result['date_order_binned'] = date_order_binned
                     all_successful_results.append(result)
                     
                     try:
@@ -158,7 +170,7 @@ class BatchProcessor:
                     except Exception as e:
                         logger.error(f"Error saving result: {str(e)}")
                 else:
-                    failed_waybills.append((tracking_number, bin_id))  # Store as tuple
+                    failed_waybills.append((tracking_number, bin_id, date_order_binned))
             
             if i + self.batch_size < len(tracking_data):
                 logger.info(f"Waiting {self.batch_delay} seconds before next batch...")
@@ -207,11 +219,12 @@ class BatchProcessor:
             if current_failed:
                 logger.warning(f"\n{len(current_failed)} waybills still failed after {self.max_retries} retry attempts")
                 
-                for waybill, bin_id in current_failed:
+                for waybill, bin_id, date_order_binned in current_failed:
                     try:
                         tracking_repo.upsert({
                             'tracking_number': waybill,
-                            'bin_id': bin_id,  # Save binID even for failed records
+                            'bin_id': bin_id,
+                            'date_order_binned': date_order_binned,
                             'batch_id': batch_id,
                             'is_successful': False,
                             'error_message': f'Failed after {self.max_retries} retry attempts',
@@ -232,7 +245,7 @@ class BatchProcessor:
     
     async def process_batch(
         self,
-        tracking_data: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
+        tracking_data: List[Tuple[str, Optional[str], Optional[str]]],
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository
     ) -> Dict[str, Any]:
@@ -240,10 +253,8 @@ class BatchProcessor:
         Main batch processing method with multi-level retry
         User sees seamless results - all retry logic happens in background
         
-        UPDATED: Now accepts List[Tuple[waybill, binID]]
-        
         Args:
-            tracking_data: List of tuples [(waybill, binID), ...]
+            tracking_data: List of tuples [(waybill, binID, date_order_binned), ...]
             tracking_repo: Repository for tracking records
             api_usage_repo: Repository for API usage tracking
             
@@ -278,28 +289,32 @@ class BatchProcessor:
                 results["total_requested"] = len(tracking_data)
             
             # Check for existing cached records
-            waybills_only = [waybill for waybill, _ in tracking_data]
+            waybills_only = [waybill for waybill, _, _ in tracking_data]
             existing_records = tracking_repo.get_multiple(waybills_only)
             existing_map = {r.tracking_number: r for r in existing_records}
             
             new_tracking_data = []
             cached_results = []
             
-            for waybill, bin_id in tracking_data:
+            for waybill, bin_id, date_order_binned in tracking_data:
                 if waybill in existing_map:
                     record = existing_map[waybill]
                     # Update binID if it was None before
                     if bin_id and not record.bin_id:
                         record.bin_id = bin_id
                         tracking_repo.update(waybill, {'bin_id': bin_id})
+                    # Update date_order_binned if it was None before
+                    if date_order_binned and not record.date_order_binned:
+                        record.date_order_binned = date_order_binned
+                        tracking_repo.update(waybill, {'date_order_binned': date_order_binned})
                     
                     if record.last_checked and (datetime.utcnow() - record.last_checked).seconds < 3600:
                         cached_results.append(record)
                         logger.info(f"Using cached data for {waybill} (binID: {bin_id})")
                     else:
-                        new_tracking_data.append((waybill, bin_id))
+                        new_tracking_data.append((waybill, bin_id, date_order_binned))
                 else:
-                    new_tracking_data.append((waybill, bin_id))
+                    new_tracking_data.append((waybill, bin_id, date_order_binned))
             
             if new_tracking_data:
                 processing_result = await self._process_with_multi_retry(
@@ -345,7 +360,7 @@ class BatchProcessor:
     
     async def process_large_batch(
         self,
-        tracking_data: List[Tuple[str, Optional[str]]],  # UPDATED: Now List[Tuple]
+        tracking_data: List[Tuple[str, Optional[str], Optional[str]]],
         tracking_repo: TrackingRepository,
         api_usage_repo: APIUsageRepository,
         progress_callback: Optional[callable] = None
@@ -353,10 +368,8 @@ class BatchProcessor:
         """
         Process large batch - uses same multi-retry system
         
-        UPDATED: Now accepts List[Tuple[waybill, binID]]
-        
         Args:
-            tracking_data: List of tuples [(waybill, binID), ...]
+            tracking_data: List of tuples [(waybill, binID, date_order_binned), ...]
             tracking_repo: Tracking repository
             api_usage_repo: API usage repository
             progress_callback: Optional callback for progress updates
@@ -383,4 +396,3 @@ class BatchProcessor:
         retry_buffer = (count * 0.1) * 2 * (self.retry_delay + 5)
         total = base_time + processing_time + retry_buffer
         return total
-

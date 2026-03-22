@@ -3,6 +3,11 @@ Pydantic schemas for request/response validation
 Ensures type safety and data validation
 
 FINAL VERSION - Simple text area input matching single tracking style
+CHANGES MADE:
+- Added date_order_binned field to TrackingResponse
+- PlainTextBulkRequest and PlainTextExportRequest validators now return
+  3-tuples (waybill, bin_id, date_order_binned) — date is always None
+  for manual text entry since it only comes from file uploads
 """
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any, Tuple
@@ -49,6 +54,7 @@ class TrackingResponse(BaseModel):
     """Response for single tracking query"""
     tracking_number: str
     bin_id: Optional[str] = None
+    date_order_binned: Optional[str] = None  # NEW: waybill creation date from input file
     status_code: Optional[str] = None
     status: Optional[str] = None
     origin: Optional[str] = None
@@ -64,6 +70,7 @@ class TrackingResponse(BaseModel):
             "example": {
                 "tracking_number": "1234567890",
                 "bin_id": "BIN001",
+                "date_order_binned": "2025-07-04 13:54:21",
                 "status_code": "delivered",
                 "status": "Delivered",
                 "origin": "New York, USA",
@@ -104,6 +111,7 @@ class PlainTextBulkRequest(BaseModel):
     """
     Simple bulk tracking request - one text area
     Format: waybill,binID per line
+    date_order_binned is always None here — only available from file uploads
     """
     tracking_data: str = Field(
         ..., 
@@ -116,7 +124,8 @@ class PlainTextBulkRequest(BaseModel):
         """
         Parse text area input
         Accepts: waybill,binID per line
-        Returns: List[Tuple[waybill, binID]]
+        Returns: List[Tuple[waybill, binID, date_order_binned]]
+        date_order_binned is always None for manual entry
         """
         if not v or not v.strip():
             raise ValueError("No tracking data provided")
@@ -142,7 +151,8 @@ class PlainTextBulkRequest(BaseModel):
             if not waybill:
                 raise ValueError(f"Line {line_num}: Waybill cannot be empty")
             
-            tracking_list.append((waybill, bin_id))
+            # date_order_binned is None for manual text entry
+            tracking_list.append((waybill, bin_id, None))
         
         if not tracking_list:
             raise ValueError("No valid tracking data found")
@@ -153,10 +163,10 @@ class PlainTextBulkRequest(BaseModel):
         # Remove duplicates
         seen = set()
         unique = []
-        for waybill, bin_id in tracking_list:
+        for waybill, bin_id, date_val in tracking_list:
             if waybill not in seen:
                 seen.add(waybill)
-                unique.append((waybill, bin_id))
+                unique.append((waybill, bin_id, date_val))
         
         return unique
     
@@ -213,6 +223,7 @@ class PlainTextExportRequest(BaseModel):
     """
     Simple export request - one text area
     Format: waybill,binID per line
+    date_order_binned is always None here — only available from file uploads
     """
     tracking_data: str = Field(
         ..., 
@@ -226,7 +237,8 @@ class PlainTextExportRequest(BaseModel):
         """
         Parse text area input
         Accepts: waybill,binID per line
-        Returns: List[Tuple[waybill, binID]]
+        Returns: List[Tuple[waybill, binID, date_order_binned]]
+        date_order_binned is always None for manual entry
         """
         if not v or not v.strip():
             raise ValueError("No tracking data provided")
@@ -250,7 +262,8 @@ class PlainTextExportRequest(BaseModel):
             if not waybill:
                 raise ValueError(f"Line {line_num}: Waybill cannot be empty")
             
-            tracking_list.append((waybill, bin_id))
+            # date_order_binned is None for manual text entry
+            tracking_list.append((waybill, bin_id, None))
         
         if not tracking_list:
             raise ValueError("No valid tracking data found")
@@ -258,10 +271,10 @@ class PlainTextExportRequest(BaseModel):
         # Remove duplicates
         seen = set()
         unique = []
-        for waybill, bin_id in tracking_list:
+        for waybill, bin_id, date_val in tracking_list:
             if waybill not in seen:
                 seen.add(waybill)
-                unique.append((waybill, bin_id))
+                unique.append((waybill, bin_id, date_val))
         
         return unique
     
@@ -357,4 +370,4 @@ class HealthCheckResponse(BaseModel):
                 "api_available": True
             }
         }
-
+        

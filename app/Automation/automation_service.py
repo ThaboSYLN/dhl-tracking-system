@@ -1,6 +1,10 @@
 """
 Automation Service - WITH AUTO-REPORTS, SCHEDULED FILE PROCESSING, AND WAYBILL VALIDATOR
 Main service with network folder support, automatic PDF generation, and specialized waybill validation
+
+CHANGES MADE:
+- tracking_data unpacking updated from (waybill, _) to (waybill, _, _) to handle
+  the new 3-tuple format (waybill, binID, date_order_binned) from file_processor
 """
 import asyncio
 import logging
@@ -242,7 +246,8 @@ class AutomationService:
                 logger.info(f"Processing complete: {results['successful']} successful, {results['failed']} failed")
             
             # Get list of tracking numbers for report
-            tracking_numbers = [waybill for waybill, _ in tracking_data]
+            # UPDATED: now unpacks 3-tuples (waybill, binID, date_order_binned)
+            tracking_numbers = [waybill for waybill, _, _ in tracking_data]
             
             # Move to processed folder based on source
             if source_folder == "DHL Waybill Validator":
@@ -478,4 +483,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+    
