@@ -201,7 +201,13 @@ class ExportService:
 
     def _get_date_order_binned(self, record: TrackingRecord) -> str:
         """Return the waybill creation date (dateOrderBinned) or N/A."""
-        return record.date_order_binned or "N/A"
+        value = record.date_order_binned
+        if not value:
+             return "N/A"
+        # Strip time portion — handles formats like:
+        # "2026-03-13 08:03:14.000" → "2026-03-13"
+        # "2026-03-13T08:03:14.000" → "2026-03-13"
+        return str(value).split(" ")[0].split("T")[0].strip() or "N/A"
 
     def generate_filename(self, format: str) -> str:
         """Generate unique filename for export"""
