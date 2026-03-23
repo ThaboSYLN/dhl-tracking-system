@@ -33,6 +33,14 @@ class EmailService:
             logger.error(f"PDF not found: {pdf_path}")
             return
 
+        # Path to your constant PDF
+        constant_pdf = Path("data/trainingPDF/training.pdf")
+
+        if not constant_pdf.exists():
+            logger.error(f"Constant PDF not found: {constant_pdf}")
+            # continue anyway, since it's optional
+
+        # ✅ These must ALWAYS run — OUTSIDE the IF block
         subject = f"DHL Tracking Report - {Path(pdf_path).stem}"
         body = "Hi team,\n\nA new tracking file has been processed.\n"
         if source_file:
@@ -45,10 +53,18 @@ class EmailService:
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
 
+        # Attach dynamic PDF
         with open(pdf_path, "rb") as f:
             attach = MIMEApplication(f.read(), _subtype="pdf")
             attach.add_header("Content-Disposition", "attachment", filename=Path(pdf_path).name)
             msg.attach(attach)
+
+        # Attach constant PDF (optional)
+        if constant_pdf.exists():
+            with open(constant_pdf, "rb") as f:
+                const_attach = MIMEApplication(f.read(), _subtype="pdf")
+                const_attach.add_header("Content-Disposition", "attachment", filename=constant_pdf.name)
+                msg.attach(const_attach)
 
         try:
             with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
@@ -57,42 +73,3 @@ class EmailService:
             logger.info(f"Auto-email sent → {', '.join(self.recipients)}")
         except Exception as e:
             logger.error(f"Email failed: {e}")
-
-    def send_empty_report_alert(self, source_file: str = None):
-        """
-        Send an alert email when all records were filtered out of a report.
-        This fires when every record in the processed file had a status
-        that is excluded from reports (e.g. pre-transit).
-        The alert always goes to thabospenser@gmail.com.
-        """
-        alert_recipient = "thabo.mthethwa@external.idemia.com"
-
-        subject = "⚠️ DHL Report Alert — No Records Included in Report"
-
-        body = "Hi,\n\n"
-        body += "A tracking file was processed but the generated report contains NO records.\n\n"
-        body += "This means every entry in the file had a status that is excluded from reports\n"
-        body += "(e.g. pre-transit or any other status on the exclusion list).\n\n"
-
-        if source_file:
-            body += f"Source file: {source_file}\n\n"
-
-        body += "Please review the file and check whether the statuses are expected.\n\n"
-        body += "If this keeps happening, consider updating the exclusion list in:\n"
-        body += "  app/core/export_services.py → PRE_TRANSIT_STATUSES\n\n"
-        body += "Pre-Production Team"
-
-        msg = MIMEMultipart()
-        msg["From"] = settings.EMAIL_FROM
-        msg["To"] = alert_recipient
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-
-        try:
-            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-                server.starttls()
-                server.sendmail(settings.EMAIL_FROM, [alert_recipient], msg.as_string())
-            logger.info(f"Empty-report alert sent → {alert_recipient}")
-        except Exception as e:
-            logger.error(f"Failed to send empty-report alert: {e}")
-
