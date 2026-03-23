@@ -5,6 +5,7 @@ Follows declarative base pattern
 CHANGES MADE:
 - Added bin_id column to TrackingRecord model (Line 22)
 - bin_id is nullable and indexed for better query performance
+- Added date_order_binned column to store dateOrderBinned from input files
 """
 from sqlalchemy import Column, Integer, String, DateTime, JSON, Boolean
 from sqlalchemy.ext.declarative import declarative_base
@@ -25,6 +26,9 @@ class TrackingRecord(Base):
     
     # NEW: binID column added to associate with tracking number
     bin_id = Column(String(100), nullable=True, index=True)
+
+    # NEW: date the order was binned — sourced from dateOrderBinned column in input files
+    date_order_binned = Column(String(100), nullable=True)
     
     # Tracking Information
     status_code = Column(String(20), nullable=True)
@@ -84,4 +88,3 @@ class ExportHistory(Base):
     
     def __repr__(self):
         return f"<ExportHistory(type={self.export_type}, records={self.record_count})>"
-

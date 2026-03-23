@@ -8,6 +8,7 @@ CHANGES MADE:
 2. extract_tracking_numbers_from_excel: Now returns List[Tuple[waybill, binID]] (Lines 152-214)
 3. Added _find_column helper method to find columns flexibly (Lines 73-86)
 4. process_file: Returns List[Tuple[waybill, binID]] (Lines 216-274)
+5. All methods now return 3-tuples (waybill, binID, date_order_binned) to carry dateOrderBinned
 """
 import pandas as pd
 import os
@@ -92,14 +93,12 @@ class FileProcessor:
                 return col
         return None
     
-    def extract_tracking_numbers_from_csv(self, file_path: str) -> List[Tuple[str, Optional[str]]]:
+    def extract_tracking_numbers_from_csv(self, file_path: str) -> List[Tuple[str, Optional[str], Optional[str]]]:
         """
-        Extract tracking numbers and binIDs from CSV file
-        
-        UPDATED: Now extracts both waybill and binID columns
+        Extract tracking numbers, binIDs, and dateOrderBinned from CSV file
         
         Returns:
-            List of tuples: [(waybill, binID), ...]
+            List of tuples: [(waybill, binID, date_order_binned), ...]
         """
         try:
             df = pd.read_csv(file_path)
@@ -117,9 +116,16 @@ class FileProcessor:
                 'bin_no', 'binno', 'bin number', 'binnumber', 'location',
                 'bin_location', 'binlocation'
             ]
+
+            # Look for dateOrderBinned column
+            date_columns = [
+                'dateorderbinned', 'date_order_binned', 'dateorder',
+                'date_binned', 'orderbinneddate', 'binned_date', 'bindate',
+            ]
             
             waybill_col = self._find_column(df, waybill_columns)
             binid_col = self._find_column(df, binid_columns)
+            date_col = self._find_column(df, date_columns)
             
             # If no waybill column found, use first column
             if waybill_col is None:
@@ -135,6 +141,11 @@ class FileProcessor:
                 if second_col:
                     binid_col = second_col
                     logger.info(f"Using second column as binID: {binid_col}")
+
+            if date_col:
+                logger.info(f"Found dateOrderBinned column: {date_col}")
+            else:
+                logger.info("No dateOrderBinned column found — date will be None for all records")
             
             # Extract waybills
             waybills = df[waybill_col].astype(str).str.strip(" ").tolist()
@@ -145,18 +156,30 @@ class FileProcessor:
             else:
                 bin_ids = [None] * len(waybills)
                 logger.info("No binID column found, all binIDs will be None")
+
+            # Extract dates if column exists
+            if date_col:
+                dates = df[date_col].astype(str).str.strip().tolist()
+            else:
+                dates = [None] * len(waybills)
             
             # Combine and clean
             tracking_data = []
-            for waybill, bin_id in zip(waybills, bin_ids):
+            for waybill, bin_id, date_val in zip(waybills, bin_ids, dates):
                 # Clean waybill
                 if waybill and waybill.lower() not in ['nan', 'none', '']:
                     waybill = waybill.upper()
                     # Clean binID
                     if bin_id and bin_id.lower() not in ['nan', 'none', '']:
-                        tracking_data.append((waybill, bin_id))
+                        clean_bin = bin_id
                     else:
-                        tracking_data.append((waybill, None))
+                        clean_bin = None
+                    # Clean date
+                    if date_val and date_val.lower() not in ['nan', 'none', '']:
+                        clean_date = date_val
+                    else:
+                        clean_date = None
+                    tracking_data.append((waybill, clean_bin, clean_date))
             
             logger.info(f"Extracted {len(tracking_data)} tracking records from CSV")
             return tracking_data
@@ -165,14 +188,12 @@ class FileProcessor:
             logger.error(f"Error extracting from CSV: {str(e)}")
             raise FileProcessorException(f"Failed to extract from CSV: {str(e)}")
     
-    def extract_tracking_numbers_from_excel(self, file_path: str) -> List[Tuple[str, Optional[str]]]:
+    def extract_tracking_numbers_from_excel(self, file_path: str) -> List[Tuple[str, Optional[str], Optional[str]]]:
         """
-        Extract tracking numbers and binIDs from Excel file
-        
-        UPDATED: Now extracts both waybill and binID columns
+        Extract tracking numbers, binIDs, and dateOrderBinned from Excel file
         
         Returns:
-            List of tuples: [(waybill, binID), ...]
+            List of tuples: [(waybill, binID, date_order_binned), ...]
         """
         try:
             df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
@@ -190,9 +211,16 @@ class FileProcessor:
                 'bin_no', 'binno', 'bin number', 'binnumber', 'location',
                 'bin_location', 'binlocation'
             ]
+
+            # Look for dateOrderBinned column
+            date_columns = [
+                'dateorderbinned', 'date_order_binned', 'dateorder',
+                'date_binned', 'orderbinneddate', 'binned_date', 'bindate',
+            ]
             
             waybill_col = self._find_column(df, waybill_columns)
             binid_col = self._find_column(df, binid_columns)
+            date_col = self._find_column(df, date_columns)
             
             # If no waybill column found, use first column
             if waybill_col is None:
@@ -207,9 +235,13 @@ class FileProcessor:
                 if second_col:
                     binid_col = second_col
                     logger.info(f"Using second column as binID: {binid_col}")
+
+            if date_col:
+                logger.info(f"Found dateOrderBinned column: {date_col}")
+            else:
+                logger.info("No dateOrderBinned column found — date will be None for all records")
             
             # Extract waybills
-           # waybills = df[waybill_col].astype(str).str.strip().tolist()
             waybills = df[waybill_col].astype(str).str.replace(' ', '').tolist()
             
             # Extract binIDs if column exists
@@ -218,16 +250,27 @@ class FileProcessor:
             else:
                 bin_ids = [None] * len(waybills)
                 logger.info("No binID column found, all binIDs will be None")
+
+            # Extract dates if column exists
+            if date_col:
+                dates = df[date_col].astype(str).str.strip().tolist()
+            else:
+                dates = [None] * len(waybills)
             
             # Combine and clean
             tracking_data = []
-            for waybill, bin_id in zip(waybills, bin_ids):
+            for waybill, bin_id, date_val in zip(waybills, bin_ids, dates):
                 if waybill and waybill.lower() not in ['nan', 'none', '']:
                     waybill = waybill.upper()
                     if bin_id and bin_id.lower() not in ['nan', 'none', '']:
-                        tracking_data.append((waybill, bin_id))
+                        clean_bin = bin_id
                     else:
-                        tracking_data.append((waybill, None))
+                        clean_bin = None
+                    if date_val and date_val.lower() not in ['nan', 'none', '']:
+                        clean_date = date_val
+                    else:
+                        clean_date = None
+                    tracking_data.append((waybill, clean_bin, clean_date))
             
             logger.info(f"Extracted {len(tracking_data)} tracking records from Excel")
             return tracking_data
@@ -236,14 +279,12 @@ class FileProcessor:
             logger.error(f"Error extracting from Excel: {str(e)}")
             raise FileProcessorException(f"Failed to extract from Excel: {str(e)}")
     
-    async def process_file(self, file: UploadFile) -> List[Tuple[str, Optional[str]]]:
+    async def process_file(self, file: UploadFile) -> List[Tuple[str, Optional[str], Optional[str]]]:
         """
         Main method to process uploaded file
         
-        UPDATED: Returns List[Tuple[waybill, binID]]
-        
         Returns:
-            List of tuples: [(waybill, binID), ...]
+            List of tuples: [(waybill, binID, date_order_binned), ...]
         """
         self.validate_file(file)
         file_path = await self.save_upload_file(file)
@@ -261,10 +302,10 @@ class FileProcessor:
             # Remove duplicates while preserving order (based on waybill)
             seen = set()
             unique_tracking_data = []
-            for waybill, bin_id in tracking_data:
+            for waybill, bin_id, date_val in tracking_data:
                 if waybill not in seen:
                     seen.add(waybill)
-                    unique_tracking_data.append((waybill, bin_id))
+                    unique_tracking_data.append((waybill, bin_id, date_val))
             
             return unique_tracking_data
             
@@ -279,4 +320,3 @@ class FileProcessor:
 
 # Create file processor instance
 file_processor = FileProcessor()
-
